@@ -1,0 +1,824 @@
+{
+	"info": {
+		"_postman_id": "9194639c-c353-4885-b3f5-21ca177350ff",
+		"name": "Management API Tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "38297939"
+	},
+	"item": [
+		{
+			"name": "Post Contents",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Post Content\", function () {\r",
+							"    let responseJson = pm.response.json();\r",
+							"    if (responseJson.id) {\r",
+							"        pm.collectionVariables.set('CONTENT_ID', responseJson.id);\r",
+							"    }\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{{JSON_CONTENT}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{BACKEND_SERVICE}}/v1/data"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Asset",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test(\"Asset Created\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    var expectedId = pm.collectionVariables.get(\"ASSET_ID\");",
+							"    pm.expect(jsonData[\"@id\"]).to.eql(expectedId)",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n  \"@id\": \"{{ASSET_ID}}\",\n  \"@type\": \"Asset\",\n  \"properties\": {\n    \"description\": \"Product EDC Demo Asset\"\n  },\n  \"dataAddress\": {\n    \"@type\": \"DataAddress\",\n    \"type\": \"HttpData\",\n    \"baseUrl\": \"{{BACKEND_SERVICE_PROTOCOL}}/v1/data/{{CONTENT_ID}}\"\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{PROVIDER_MANAGEMENT_URL}}/v3/assets"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Asset by ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status Code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Get Asset by ID\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    var expectedId = pm.collectionVariables.get(\"ASSET_ID\");\r",
+							"    pm.expect(jsonData[\"@id\"]).to.eql(expectedId)\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{PROVIDER_MANAGEMENT_URL}}/v3/assets/{{ASSET_ID}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Policy",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status Code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Policy Created\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    var expectedId = pm.collectionVariables.get(\"POLICY_ID\");\r",
+							"    pm.expect(jsonData[\"@id\"]).to.eql(expectedId)\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n  \"@type\": \"PolicyDefinition\",\n  \"@id\": \"{{POLICY_ID}}\",\n  \"policy\": {\n    \"@type\": \"odrl:Set\",\n    \"odrl:permission\": [\n      {\n        \"odrl:action\": \"USE\",\n        \"odrl:constraint\": {\n          \"@type\": \"LogicalConstraint\",\n          \"odrl:or\": [\n            {\n              \"@type\": \"Constraint\",\n              \"odrl:leftOperand\": \"BusinessPartnerNumber\",\n              \"odrl:operator\": {\n                \"@id\": \"odrl:eq\"\n              },\n              \"odrl:rightOperand\": \"{{CONSUMER_ID}}\"\n            }\n          ]\n        }\n      }\n    ]\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{PROVIDER_MANAGEMENT_URL}}/v3/policydefinitions"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Policies by ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Get Policy by ID\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    var expectedId = pm.collectionVariables.get(\"POLICY_ID\");\r",
+							"    pm.expect(jsonData[\"@id\"]).to.eql(expectedId)\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{PROVIDER_MANAGEMENT_URL}}/v3/policydefinitions/{{POLICY_ID}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Contract Definition",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Contract Definition Created\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    var expectedId = pm.collectionVariables.get(\"CONTRACT_DEFINITION_ID\");\r",
+							"    pm.expect(jsonData[\"@id\"]).to.eql(expectedId)\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n   \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n  \"@id\": \"{{CONTRACT_DEFINITION_ID}}\",\n  \"@type\": \"ContractDefinition\",\n  \"accessPolicyId\": \"{{POLICY_ID}}\",\n  \"contractPolicyId\": \"{{POLICY_ID}}\",\n  \"assetsSelector\": {\n    \"@type\": \"CriterionDto\",\n    \"operandLeft\": \"{{EDC_NAMESPACE}}id\",\n    \"operator\": \"=\",\n    \"operandRight\": \"{{ASSET_ID}}\"\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{PROVIDER_MANAGEMENT_URL}}/v3/contractdefinitions"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Contract Definitiion by ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"  pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Get Contract Definition by ID\", function () {\r",
+							"  var jsonData = pm.response.json();\r",
+							"   var expectedId = pm.collectionVariables.get(\"CONTRACT_DEFINITION_ID\");\r",
+							"    pm.expect(jsonData[\"@id\"]).to.eql(expectedId)\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{PROVIDER_MANAGEMENT_URL}}/v3/contractdefinitions/{{CONTRACT_DEFINITION_ID}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Query Catalog",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test(\"Query Catalog \", function () {",
+							"    var jsonData = pm.response.json();",
+							"",
+							"   var offer = jsonData['dcat:dataset'].find(dataset => dataset[\"@id\"] === pm.collectionVariables.get(\"ASSET_ID\"));",
+							"    pm.expect(offer).to.not.be.null;",
+							"    pm.collectionVariables.set(\"OFFER_ID\", offer[\"odrl:hasPolicy\"][\"@id\"]);",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"@context\": [\r\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\r\n    ],\r\n  \"@type\": \"CatalogRequest\",\r\n  \"counterPartyAddress\": \"{{PROVIDER_PROTOCOL_URL}}\",\r\n  \"counterPartyId\": \"{{PROVIDER_ID}}\",\r\n  \"protocol\": \"dataspace-protocol-http\",\r\n  \"querySpec\": {\r\n    \"offset\": 0,\r\n    \"limit\": 50\r\n  }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{CONSUMER_MANAGEMENT_URL}}/v3/catalog/request"
+			},
+			"response": []
+		},
+		{
+			"name": "Initiate Negotation",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Initiated Negotiation\", function () {",
+							"  pm.collectionVariables.set(\"NEGOTIATION_ID\", jsonData[\"@id\"]);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\",\n        {\n            \"tx\": \"https://w3id.org/tractusx/v0.0.1/ns/\"\n        },\n        {\n            \"tx-auth\": \"https://w3id.org/tractusx/auth/\"\n        },\n        {\n            \"cx-policy\": \"https://w3id.org/catenax/policy/\"\n        }\n    ],\n    \"@type\": \"ContractRequest\",\n    \"counterPartyAddress\": \"{{PROVIDER_PROTOCOL_URL}}\",\n    \"protocol\": \"dataspace-protocol-http\",\n    \"counterPartyId\": \"{{PROVIDER_ID}}\",\n    \"policy\": {\n        \"@type\": \"Offer\",\n        \"@id\": \"{{OFFER_ID}}\",\n        \"assigner\": \"{{PROVIDER_ID}}\",\n        \"odrl:permission\": {\n            \"odrl:target\": \"{{ASSET_ID}}\",\n            \"odrl:action\": {\n                \"odrl:type\": \"USE\"\n            },\n            \"odrl:constraint\": {\n                \"odrl:or\": {\n                    \"odrl:leftOperand\": \"BusinessPartnerNumber\",\n                    \"odrl:operator\": {\n                        \"@id\": \"odrl:eq\"\n                    },\n                    \"odrl:rightOperand\": \"{{CONSUMER_ID}}\"\n                }\n            }\n        },\n        \"odrl:prohibition\": [],\n        \"odrl:obligation\": [],\n        \"target\": \"{{ASSET_ID}}\"\n    },\n    \"callbackAddresses\": []\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{CONSUMER_MANAGEMENT_URL}}/v3/contractnegotiations"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Negotations By ID",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const API_KEY_HEADER = 'X-Api-Key';\r",
+							"const URL=`${pm.collectionVariables.get(\"CONSUMER_MANAGEMENT_URL\")}/v3/contractnegotiations/${pm.collectionVariables.get(\"NEGOTIATION_ID\")}/state`;\r",
+							"function delay(ms) {\r",
+							"  return new Promise(resolve => setTimeout(resolve, ms));\r",
+							"}\r",
+							"\r",
+							"async function makeRequests() {\r",
+							"  for (let i = 0; i < 10; i++) {\r",
+							"    const response = await new Promise(resolve => {\r",
+							"      pm.sendRequest({\r",
+							"        url: URL,\r",
+							"        method: 'GET',\r",
+							"        header: {\r",
+							"          ...pm.request.headers.toObject(),\r",
+							"          [API_KEY_HEADER]: pm.collectionVariables.get(\"API_KEY_PASSWORD\"),\r",
+							"        },\r",
+							"      }, (error, response) => {\r",
+							"        resolve(response);\r",
+							"      });\r",
+							"    });\r",
+							"\r",
+							"    var data = response.json();\r",
+							"    if (data[\"state\"] === \"FINALIZED\") {\r",
+							"      break;\r",
+							"    }\r",
+							"    else {\r",
+							"      await delay(500);\r",
+							"    }\r",
+							"  }\r",
+							"}\r",
+							"makeRequests();\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"  pm.response.to.have.status(200);\r",
+							"});\r",
+							"var jsonData = pm.response.json();\r",
+							"pm.test(\"Get Negotiation \", function () {\r",
+							"   pm.expect(jsonData[\"state\"]).to.eql(\"FINALIZED\");\r",
+							"   pm.collectionVariables.set(\"CONTRACT_AGREEMENT_ID\", jsonData[\"contractAgreementId\"]);\r",
+							"  \r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{CONSUMER_MANAGEMENT_URL}}/v3/contractnegotiations/{{NEGOTIATION_ID}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Initiate Transfer",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"var jsonData = pm.response.json();",
+							"pm.test(\"Initiated Transfer \" , function () {",
+							"  pm.collectionVariables.set(\"TRANSFER_ID\", jsonData[\"@id\"]);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        {\n            \"odrl\": \"http://www.w3.org/ns/odrl/2/\"\n        },\n        {\n            \"tx\": \"https://w3id.org/tractusx/v0.0.1/ns/\"\n        },\n        {\n            \"tx-auth\": \"https://w3id.org/tractusx/auth/\"\n        },\n        {\n            \"cx-policy\": \"https://w3id.org/catenax/policy/\"\n        }\n    ],\n    \"@type\": \"TransferRequest\",\n    \"assetId\": \"{{ASSET_ID}}\",\n    \"counterPartyAddress\": \"{{PROVIDER_PROTOCOL_URL}}\",\n    \"counterPartyId\": \"{{PROVIDER_ID}}\",\n    \"contractId\": \"{{CONTRACT_AGREEMENT_ID}}\",\n    \"dataDestination\": {\n        \"type\": \"HttpProxy\"\n    },\n    \"protocol\": \"dataspace-protocol-http\",\n    \"transferType\": \"HttpData-PULL\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{CONSUMER_MANAGEMENT_URL}}/v3/transferprocesses"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Transfer by ID",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const API_KEY_HEADER = 'X-Api-Key';\r",
+							"const URL=`${pm.collectionVariables.get(\"CONSUMER_MANAGEMENT_URL\")}/v3/transferprocesses/${pm.collectionVariables.get(\"TRANSFER_ID\")}/state`;\r",
+							"function delay(ms) {\r",
+							"  return new Promise(resolve => setTimeout(resolve, ms));\r",
+							"}\r",
+							"\r",
+							"async function makeRequests() {\r",
+							"  for (let i = 0; i < 10; i++) {\r",
+							"    const response = await new Promise(resolve => {\r",
+							"      pm.sendRequest({\r",
+							"        url: URL,\r",
+							"        method: 'GET',\r",
+							"        header: {\r",
+							"          ...pm.request.headers.toObject(),\r",
+							"          [API_KEY_HEADER]: pm.collectionVariables.get(\"API_KEY_PASSWORD\"),\r",
+							"        },\r",
+							"      }, (error, response) => {\r",
+							"        resolve(response);\r",
+							"      });\r",
+							"    });\r",
+							"\r",
+							"    var data = response.json();\r",
+							"    if (data[\"state\"] === \"STARTED\") {\r",
+							"      break;\r",
+							"    }\r",
+							"    else {\r",
+							"      await delay(500);\r",
+							"    }\r",
+							"  }\r",
+							"}\r",
+							"makeRequests();\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status Code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"var jsonData = pm.response.json();\r",
+							"pm.test(\"Get Transfer \", function () {\r",
+							" pm.expect(jsonData[\"state\"]).to.eql(\"STARTED\");\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{CONSUMER_MANAGEMENT_URL}}/v3/transferprocesses/{{TRANSFER_ID}}"
+			},
+			"response": []
+		},
+		{
+			"name": "Get EDR DataAddress for TransferId",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"if(!pm.collectionVariables.has(\"TRANSFER_ID\")){",
+							"    throw new Error('Transfer ID is not yet available, please execute request \"Initiate Transfer\" first!');",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// get the authorization token and save it as an environment variable",
+							"if(pm.response.code < 300 && pm.response.code >= 200){",
+							"  //using the first authorization token found",
+							"  const authorization = pm.response.json()[\"authorization\"];",
+							"  pm.collectionVariables.set(\"AUTHORIZATION\", authorization);",
+							"",
+							"  pm.collectionVariables.set(\"REFRESH_TOKEN\", pm.response.json()[\"tx-auth:refreshToken\"])",
+							"  pm.collectionVariables.set(\"REFRESH_AUD\", pm.response.json()[\"tx-auth:refreshAudience\"])",
+							"  pm.collectionVariables.set(\"REFRESH_ENDPOINT\", pm.response.json()[\"tx-auth:refreshEndpoint\"])",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{CONSUMER_MANAGEMENT_URL}}/v3/edrs/{{TRANSFER_ID}}/dataaddress"
+			},
+			"response": []
+		},
+		{
+			"name": "Validate Transfer",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Response status code is 200', () => {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"var expected = JSON.stringify(JSON.parse(pm.collectionVariables.get('JSON_CONTENT')));\r",
+							"var actual =  JSON.stringify(pm.response.json());\r",
+							"\r",
+							"pm.test('Validation Transfer ', () => {\r",
+							"    pm.expect(expected).to.eql(actual);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{AUTHORIZATION}}",
+						"type": "text"
+					}
+				],
+				"url": "{{PROVIDER_PUBLIC_URL}}"
+			},
+			"response": []
+		},
+		{
+			"name": "refresh token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// get the authorization token and save it as an environment variable",
+							"if(pm.response.code < 300 && pm.response.code >= 200){",
+							"  //using the first authorization token found",
+							"  const authorization = pm.response.json()[\"authorization\"];",
+							"  pm.collectionVariables.set(\"AUTHORIZATION\", authorization);",
+							"",
+							"  pm.collectionVariables.set(\"REFRESH_TOKEN\", pm.response.json()[\"tx-auth:refreshToken\"])",
+							"  pm.collectionVariables.set(\"REFRESH_AUD\", pm.response.json()[\"tx-auth:refreshAudience\"])",
+							"  pm.collectionVariables.set(\"REFRESH_ENDPOINT\", pm.response.json()[\"tx-auth:refreshEndpoint\"])",
+							"}",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost/bob/management/v3/edrs/{{TRANSFER_ID}}/refresh?auto_refresh=true",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"path": [
+						"bob",
+						"management",
+						"v3",
+						"edrs",
+						"{{TRANSFER_ID}}",
+						"refresh"
+					],
+					"query": [
+						{
+							"key": "auto_refresh",
+							"value": "true"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": {
+			"value": "{{API_KEY_PASSWORD}}",
+			"key": "X-Api-Key"
+		}
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "CONSUMER_MANAGEMENT_URL",
+			"value": "http://localhost/bob/management"
+		},
+		{
+			"key": "PROVIDER_PROTOCOL_URL",
+			"value": "http://alice-controlplane:8084/api/v1/dsp"
+		},
+		{
+			"key": "PROVIDER_MANAGEMENT_URL",
+			"value": "http://localhost/alice/management"
+		},
+		{
+			"key": "ASSET_ID",
+			"value": "200",
+			"type": "default"
+		},
+		{
+			"key": "POLICY_ID",
+			"value": "200",
+			"type": "default"
+		},
+		{
+			"key": "CONTRACT_DEFINITION_ID",
+			"value": "200",
+			"type": "default"
+		},
+		{
+			"key": "CONSUMER_ID",
+			"value": "BPNL000000000002",
+			"type": "default"
+		},
+		{
+			"key": "PROVIDER_ID",
+			"value": "BPNL000000000001",
+			"type": "string"
+		},
+		{
+			"key": "EDC_NAMESPACE",
+			"value": "https://w3id.org/edc/v0.0.1/ns/",
+			"type": "string"
+		},
+		{
+			"key": "API_KEY_PASSWORD",
+			"value": "password",
+			"type": "string"
+		},
+		{
+			"key": "BACKEND_SERVICE",
+			"value": "http://localhost/data-service",
+			"type": "string"
+		},
+		{
+			"key": "BACKEND_SERVICE_PROTOCOL",
+			"value": "http://data-service-api:8080",
+			"type": "string"
+		},
+		{
+			"key": "JSON_CONTENT",
+			"value": "{\"id\": 918704604,\"name\": \"agwng\",\"description\": \"oz\"}"
+		},
+		{
+			"key": "CONTENT_ID",
+			"value": ""
+		},
+		{
+			"key": "OFFER_ID",
+			"value": ""
+		},
+		{
+			"key": "NEGOTIATION_ID",
+			"value": ""
+		},
+		{
+			"key": "TRANSFER_ID",
+			"value": ""
+		},
+		{
+			"key": "CONTRACT_AGREEMENT_ID",
+			"value": ""
+		},
+		{
+			"key": "AUTHORIZATION",
+			"value": ""
+		},
+		{
+			"key": "REFRESH_TOKEN",
+			"value": ""
+		},
+		{
+			"key": "REFRESH_AUD",
+			"value": ""
+		},
+		{
+			"key": "REFRESH_ENDPOINT",
+			"value": ""
+		},
+		{
+			"key": "PROVIDER_PUBLIC_URL",
+			"value": "http://localhost/alice/api/public",
+			"type": "string"
+		}
+	]
+}

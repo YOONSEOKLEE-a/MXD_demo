@@ -1,0 +1,41 @@
+apiVersion: v1
+data:
+  EDC_DATASOURCE_DEFAULT_PASSWORD: issuer
+  EDC_DATASOURCE_DEFAULT_URL: jdbc:postgresql://10.96.52.183:5432/issuer
+  EDC_DATASOURCE_DEFAULT_USER: issuer
+  EDC_IAM_ACCESSTOKEN_JTI_VALIDATION: "true"
+  EDC_IAM_DID_WEB_USE_HTTPS: "false"
+  EDC_IAM_ISSUER_ID: did:web:dataspace-issuer
+  EDC_IAM_STS_OAUTH_CLIENT_ID: issuer
+  EDC_IAM_STS_OAUTH_CLIENT_SECRET_ALIAS: issuer-secret
+  EDC_IAM_STS_OAUTH_TOKEN_URL: http://dataspace-issuer-server:8080/token
+  EDC_IH_API_SUPERUSER_KEY: c3VwZXItdXNlcg==.c3VwZXItc2VjcmV0LWtleQo=
+  EDC_ISSUER_STATUSLIST_SIGNING_KEY_ALIAS: statuslist-signing-key
+  EDC_PARTICIPANT_ID: did:web:dataspace-issuer
+  EDC_SQL_SCHEMA_AUTOCREATE: "true"
+  EDC_VAULT_HASHICORP_TOKEN: root
+  EDC_VAULT_HASHICORP_URL: http://dataspace-issuer-vault:8200
+  JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1044
+  WEB_HTTP_DID_PATH: /
+  WEB_HTTP_DID_PORT: "10016"
+  WEB_HTTP_IDENTITY_AUTH_KEY: password
+  WEB_HTTP_IDENTITY_PATH: /api/identity
+  WEB_HTTP_IDENTITY_PORT: "10015"
+  WEB_HTTP_ISSUANCE_PATH: /api/issuance
+  WEB_HTTP_ISSUANCE_PORT: "10012"
+  WEB_HTTP_ISSUERADMIN_PATH: /api/admin
+  WEB_HTTP_ISSUERADMIN_PORT: "10013"
+  WEB_HTTP_PATH: /api
+  WEB_HTTP_PORT: "10010"
+  WEB_HTTP_STS_PATH: /api/sts
+  WEB_HTTP_STS_PORT: "10011"
+  WEB_HTTP_VERSION_PATH: /.well-known/api
+  WEB_HTTP_VERSION_PORT: "10014"
+immutable: false
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-01-20T01:21:13Z"
+  name: dataspace-issuer-service-config
+  namespace: mxd
+  resourceVersion: "103801"
+  uid: 58d46255-9f51-4ac9-83e6-9254751ed3fc
