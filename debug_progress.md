@@ -1634,3 +1634,17 @@ Conclusion: Catalog crawl still selects Alice’s identity because the RemoteTok
 - **Command:** `kubectl run -n mxd catalog-test --rm -i --restart=Never --image=python:3.11-slim -- sh -c "python3 - <<'PY'\nimport json\nimport urllib.request\npayload = {'@context': {'@vocab': 'https://w3id.org/edc/v0.0.1/ns/'}, 'counterPartyAddress': 'http://alice-tractusx-connector-controlplane:8084/api/v1/dsp', 'protocol': 'dataspace-protocol-http'}\nreq = urllib.request.Request('http://bob-tractusx-connector-controlplane:8081/management/v3/catalog/request', data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json', 'x-api-key': 'password'}, method='POST')\nwith urllib.request.urlopen(req) as resp:\n    print('HTTP', resp.status)\n    print(resp.read().decode('utf-8'))\nPY"`
 - **Result:** The POST still raises `HTTP Error 502: Bad Gateway` and prints the familiar payload `[{"message":"Unable to obtain credentials: Empty optional"…}]`; `bob-tractusx-connector-controlplane` logs (`kubectl logs -n mxd deployment/bob-tractusx-connector-controlplane --since=5m | egrep -i 'presentation|credential|empty optional|401|403|500'`) show repeated `dspace:CatalogError 401 Unauthorized` entries, while `alice-tractusx-connector-controlplane` logs (`kubectl logs -n mxd deployment/alice-tractusx-connector-controlplane --since=5m | egrep -i '401|invalid_client|token'`) now emit `Unauthorized: Presentation Query failed: HTTP 401, message: [{"message":"ID token [sub] claim is not equal to [token.sub] claim: expected 'did:web:bob-ih%3A7083:bob', got 'did:web:alice-ih%3A7083:alice'.",…}]` for every retry.
 - **Notes:** PresentationQuery still fails because the connector presents an Authorization token whose `sub` is Alice’s DID while the `token` claim reports Bob’s DID; `alice-ih` logs also started spitting `SqlParticipantContextStore.mapResultSet` `ArrayIndexOutOfBoundsException` stack traces whenever the controller fetches participant context (see the `--tail=500` output), perhaps driven by the same identity mismatch. The next step is to trace which participant context/STS exchange the RemoteTokenService chooses so the Authorization header aligns with the `token` claim (Bob’s DID) and the PQ can succeed.
+---
+### [Iteration 1] Align Bob connector identity to canonical DID
+- **IaC change:** `bob.tf` now passes `participantId = var.bob-did` so the Helm release sets `participant.id` to `did:web:bob-ih%3A7083:bob` instead of the BPN.
+- **Apply path:** `terraform apply -target=module.bob-connector -auto-approve` (targeted plan introduced new azurite init job along the way).
+- **Result:** Management catalog POST still fails with HTTP 502 (`Unable to obtain credentials: Empty optional`); Alice logs contain the identity-sub mismatch `expected 'did:web:bob-ih%3A7083:bob', got 'did:web:alice-ih%3A7083:alice'` while Presentation Query reports HTTP 401/500.
+- **Restart:** Alice control plane was rolled out after the apply (`kubectl rollout restart`/`kubectl rollout status` logs in `/tmp/rollout_*`).
+- **Evidence:**
+  - `/tmp/catalog_request_autofix_1.out`
+  - `/tmp/alice_sig_autofix_1.log`
+  - `/tmp/alice_sigline_autofix_1.txt`
+  - `/tmp/alice_env_autofix_1.txt`
+  - `/tmp/iac_hits_autofix_1.txt`
+  - `/tmp/rollout_restart_autofix_1.log`
+  - `/tmp/rollout_status_autofix_1.log`
