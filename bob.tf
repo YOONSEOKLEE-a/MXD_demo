@@ -70,6 +70,7 @@ module "bob-connector" {
     "TX_EDC_IAM_IATP_STS_OAUTH_TOKEN_SCOPE"           = "org.eclipse.tractusx.vc.type:MembershipCredential:read"
     "EDC_PARTICIPANT_ID"                              = var.bob-did
     "EDC_PARTICIPANT_CONTEXT_ID"                      = var.bob-did
+    "TX_EDC_PARTICIPANT_CONTEXT_ID"                   = var.bob-did
   }
 
   # Seed secrets for Bob vault

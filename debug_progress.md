@@ -1648,3 +1648,18 @@ Conclusion: Catalog crawl still selects Alice’s identity because the RemoteTok
   - `/tmp/iac_hits_autofix_1.txt`
   - `/tmp/rollout_restart_autofix_1.log`
   - `/tmp/rollout_status_autofix_1.log`
+---
+### [Iteration 2] Teach the TX pipeline to share Bob’s context
+- **IaC change:** Added `TX_EDC_PARTICIPANT_CONTEXT_ID = var.bob-did` inside `controlplane_env` so the Tractus-X-specific flow uses the same canonical DID as the main connector env.
+- **Apply path:** `terraform apply -target=module.bob-connector -auto-approve` (again triggers the azurite-init helper job).
+- **Result:** Catalog POST still ends in HTTP 502 `Unable to obtain credentials: Empty optional`; Alice logs continue to report `ID token [sub]` vs `token.sub` mismatch (`did:web:bob-ih%3A7083:bob` vs `did:web:alice-ih%3A7083:alice`).
+- **Restart:** Alice control plane rolled out after the apply (`/tmp/rollout_restart_autofix_2.log`, `/tmp/rollout_status_autofix_2.log`).
+- **Evidence:**
+  - `/tmp/catalog_request_autofix_2.out`
+  - `/tmp/alice_sig_autofix_2.log`
+  - `/tmp/alice_sigline_autofix_2.txt`
+  - `/tmp/alice_env_autofix_2.txt`
+  - `/tmp/bob_env_autofix_2.txt`
+  - `/tmp/iac_hits_autofix_2.txt`
+  - `/tmp/rollout_restart_autofix_2.log`
+  - `/tmp/rollout_status_autofix_2.log`
