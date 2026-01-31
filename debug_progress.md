@@ -1663,3 +1663,17 @@ Conclusion: Catalog crawl still selects Alice’s identity because the RemoteTok
   - `/tmp/iac_hits_autofix_2.txt`
   - `/tmp/rollout_restart_autofix_2.log`
   - `/tmp/rollout_status_autofix_2.log`
+---
+### [Iteration 3] Ensure TX participant ID matches Bob’s DID
+- **IaC change:** Injected `TX_EDC_PARTICIPANT_ID = var.bob-did` so every TX flow—from STS -> presentations -> catalog—advertises the canonical DID as its participant identity.
+- **Apply path:** `terraform apply -target=module.bob-connector -auto-approve` (azurite init job runs again as part of the Helm upgrade).
+- **Result:** Catalog request still returns HTTP 502 `Unable to obtain credentials: Empty optional`, and Alice’s logs keep logging `ID token [sub]` vs `token.sub` mismatch (`expected 'did:web:bob-ih%3A7083:bob', got 'did:web:alice-ih%3A7083:alice'`).
+- **Restart:** Alice control plane restarted (`/tmp/rollout_restart_autofix_3.log`, `/tmp/rollout_status_autofix_3.log`).
+- **Evidence:**
+  - `/tmp/catalog_request_autofix_3.out`
+  - `/tmp/alice_sig_autofix_3.log`
+  - `/tmp/alice_sigline_autofix_3.txt`
+  - `/tmp/bob_env_autofix_3.txt`
+  - `/tmp/iac_hits_autofix_3.txt`
+  - `/tmp/rollout_restart_autofix_3.log`
+  - `/tmp/rollout_status_autofix_3.log`
