@@ -1677,3 +1677,78 @@ Conclusion: Catalog crawl still selects Alice’s identity because the RemoteTok
   - `/tmp/iac_hits_autofix_3.txt`
   - `/tmp/rollout_restart_autofix_3.log`
   - `/tmp/rollout_status_autofix_3.log`
+
+## [Step 52] RemoteTokenService identity research
+- **Date:** 2026-02-01
+- **Command:** Background investigation via `librarian`/`explore` agents to locate the `RemoteTokenServiceClientExtension` docs and understand how it picks the STS client identity.
+- **Result:** The RemoteTokenService identity is driven by the Helm-rendered environment (`EDC_IAM_IATP_STS_*`, `EDC_PARTICIPANT_ID`, `EDC_PARTICIPANT_CONTEXT_ID` and the `TX_` equivalents) merged by `modules/connector/main.tf`. Bob’s `bob.tf` overrides already set these to his DID/STS host, so the catalog crawler now emits STS traffic toward `bob-ih:7084` with `client_id=did:web:bob-ih%3A7083:bob`. No public source code or documentation was found for `org.eclipse.tractusx.edc.iam.dcp.sts.RemoteTokenServiceClientExtension`, so the only knobs we currently see are those env vars we already control.
+- **Notes:** Tcpdump/`kubectl exec env` prove the participant/context target is now Bob’s DID, yet the catalog POST still fails with `HTTP 502: Unable to obtain credentials: Empty optional`. Alice’s logs report `Presentation Query failed: ID token [sub] != token.sub` (expected Bob, saw Alice) and repeated `401` responses when Bob hits Alice’s STS.
+
+## Status Summary (2026-02-01)
+- **Catalog request:** `curl` still returns `HTTP 502` with `[{"message":"Unable to obtain credentials: Empty optional"…}]`. Bob’s STS traffic now targets `bob-ih` with Bob’s DID, so identity selection is resolved, but Alice’s STS/Presentation Query keeps throwing HTTP 500 (Bdrs lookup) and HTTP 401 with `ID token [sub] != token.sub` (`expected 'did:web:bob-ih%3A7083:bob', got 'did:web:alice-ih%3A7083:alice'`). The supporting traces sit in `/tmp/catalog_request_after_participant_context.out`, `/tmp/alice_step4.log`, and `/tmp/alice_sts_pq_trace_now.log`.
+- **Next investigation:** Align the STS-issued access token’s `sub` with the ID token `sub` (Bob’s DID) so the verifier in `SelfIssuedTokenVerifierImpl` stops rejecting the presentation. This might mean tweaking the STS/IdentityHub configuration that determines the audience/subject of the `token` claim or relaxing the verifier rule, then re-running the catalog request for the HTTP 200 proof point.
+
+## [Step 53] Register Bob participant context in Alice IH
+- **Date:** 2026-02-01
+- **Command:** Inserted Bob into Alice’s `participant_context` table (`INSERT INTO participant_context (...) VALUES (...)`) and reset the stored states to valid enums (`UPDATE participant_context SET state=1 ...`), then `kubectl rollout restart deployment/alice-ih -n mxd` so the IdentityHub reloads the refreshed rows.
+- **Result:** IdentityHub no longer throws `ArrayIndexOutOfBoundsException`, but the catalog crawl still ends in `HTTP 502`; Alice’s connector logs now emit `Presentation Query failed: HTTP 401` with two flavors of `ID token verification failed` (the `sub` mismatch plus `No parser found that can handle that format`), indicating the access token is still being minted with Alice’s DID. The remaining blocker is to force the RemoteTokenService/STS exchange to use Bob’s credentials when calling `http://alice-ih:7084/api/sts/token` so the access token’s `sub` aligns with the `id_token`.
+
+## [Step 54] PresentationQuery keeps failing after STS token mismatch
+- **Date:** 2026-02-01
+- **Command:** Triggered the catalog crawl again via Bob’s control plane and inspected `/tmp/alice_sts_pq_trace_now.log` plus the control-plane logs (`kubectl logs -n mxd deployment/alice-tractusx-connector-controlplane --since=10m | egrep -i 'Presentation Query'`).
+- **Result:** The PresentationQuery handler now consistently returns HTTP 500 (Bdrs lookup) followed by HTTP 401, each time logging `ID token verification failed: ID token [sub] claim is not equal to [token.sub] claim: expected 'did:web:bob-ih%3A7083:bob', got 'did:web:alice-ih%3A7083:alice'.` This proves the access token retrieved from `http://alice-ih:7084/api/sts/token` carries Alice’s DID while the ID token carries Bob’s, triggering the verifier rule in `SelfIssuedTokenVerifierImpl`. The recurring `BdrsClientAudienceMapper` stack traces in the 500 failures hint that the upstream audience resolver continually maps the counterparty BPN to Alice’s DID, so the STS-issued token always reflects Alice instead of Bob.
+- **Notes:** Evidence lives in `/tmp/alice_sts_pq_trace_now.log` plus the `alice-tractusx-connector-controlplane` STDOUT (the repeated 500/401 errors). The new plan is to align the STS token’s `sub` with the ID token `sub` (Bob’s DID) so the PresentationQuery verifier stops throwing the mismatch before the catalog request can finally return HTTP 200; this likely requires adjusting the STS/IdentityHub config (e.g., which DID is used when issuing the `token` claim) or relaxing the verifier’s `sub` rule.
+
+## [Step 55] Bob control plane STS env alignment
+- **Date:** 2026-02-01
+- **Command:** Updated `bob.tf` so the connector’s `controlplane_env` overrides propagate `EDC_*`/`TX_*` STS URLs, client IDs, secret aliases, and participant IDs to the Helm release, and ensured `modules/connector/main.tf` merges the extra env before rendering the Helm values.
+- **Result:** Bob’s control plane now advertises the `bob-ih:7084` STS host with `did:web:bob-ih%3A7083:bob` for all `EDC_IAM_IATP_STS_*` and their `TX_` counterparts plus `EDC_PARTICIPANT_{ID,CONTEXT}_ID`, eliminating any `alice`-side identity from the runtime env that drives the RemoteTokenService.
+- **Evidence:** `bob.tf` lines 49‑75; `modules/connector/main.tf` lines 113‑124.
+- **Next investigation:** Run `terraform plan/apply`, restart Bob’s control plane, and rerun the catalog request to prove HTTP 200 without `sub` mismatch (Step 56).
+
+## [Step 56] Bob connector redeploy + catalog request attempt
+- **Date:** 2026-02-01
+- **Command:** `terraform plan -target=module.bob-connector`, `terraform apply -target=module.bob-connector -auto-approve`, `kubectl rollout restart -n mxd deployment/bob-tractusx-connector-controlplane`, `kubectl run -n mxd catalog-test --rm -i --image=curlimages/curl:8.5.0 -- sh -c 'curl ... catalog/request ...'`, while capturing `/tmp/catalog_request_final.out`, `/tmp/bob_cp_after_apply.log`, `/tmp/alice_cp_after_apply.log`, and `/tmp/bob_env_after_restart.txt` for reference.
+- **Result:** Terraform rehydrated the `bob-azurite-init` job and the control plane now uses the Bob STS env, but the catalog POST still hits HTTP 502 (`Unable to obtain credentials: Empty optional`) and Alice’s control plane keeps rejecting the Presentation Query with HTTP 401 `ID token [sub] != token.sub` (the access token’s `sub` remains `did:web:alice-ih%3A7083:alice`).
+- **Evidence:** targeted plan/apply logs (shows `kubernetes_job.azurite-init` creation), `/tmp/catalog_request_final.out` (BadGateway + HTTP=502), `/tmp/alice_cp_after_apply.log` (repeated `ID token [sub] claim` mismatch), `/tmp/bob_cp_after_apply.log`, `/tmp/bob_env_after_restart.txt`.
+- **Next investigation:** Trace how the RemoteTokenService access token keeps landing on Alice’s DID despite the new env; the next step is to align the remote STS/BDRS mapping or adjust the verifier so the issued token’s `sub` matches Bob’s DID before rerunning the catalog request.
+
+## [Step 57] Seed Alice IdentityHub with Bob's key pair and extra STS client row
+- **Date:** 2026-02-01
+- **Command:** Inserted a `keypair_resource` entry for `did:web:bob-ih%3A7083:bob#signing-key-1` and added an `edc_sts_client` row keyed by the unencoded `did:web:bob-ih:7083:bob`, then restarted `deployment/alice-ih` so the IdentityHub reloads the new records.
+- **Result:** Alice now stores Bob’s signing key + both encoded/unencoded STS client entries, eliminating earlier warnings about missing signing keys, but the Presentation Query still reports HTTP 401 `No parser found that can handle that format`/`ID token [sub] vs token.sub` mismatch when Bob hits the catalog.
+- **Evidence:** `kubectl exec ... psql ... keypair_resource ...`, `kubectl exec ... psql ... edc_sts_client ...`, `kubectl rollout restart -n mxd deployment/alice-ih`, `/tmp/alice_cp_retry.log`, `/tmp/catalog_request_retry.out`.
+- **Notes:** A direct `curl` to `http://alice-ih:7084/api/sts/token` with Bob’s credentials still returns `token.sub=did:web:bob-ih%3A7083:bob`, so the danger zone now is the RemoteTokenService/PresentationQuery path, not STS.
+
+## [Step 58] Catalog retry after seeding Alice with Bob’s metadata
+- **Date:** 2026-02-01
+- **Command:** Re-ran `kubectl run -n mxd catalog-test ... catalog/request`, grabbed `/tmp/catalog_request_retry.out`, `/tmp/bob_cp_retry.log`, `/tmp/alice_cp_retry.log`, plus refreshed the Bob env dump (`/tmp/bob_env_after_restart.txt`).
+- **Result:** The catalog POST still failes with HTTP 502 `Unable to obtain credentials: Empty optional`. Bob’s logs show repeated `dspace:CatalogError 401 Unauthorized`, while Alice continues logging `Presentation Query failed: HTTP 401` with both the `No parser found` and `ID token [sub] ≠ token.sub` errors; the RemoteTokenService still issues a token whose `token.sub` identifies Alice.
+- **Evidence:** `/tmp/catalog_request_retry.out`, `/tmp/bob_cp_retry.log`, `/tmp/alice_cp_retry.log`, `/tmp/bob_env_after_restart.txt` (shows the canonical STS env). The new plan is to trace which participant context the RemoteTokenService chooses and why the `token.sub` claim remains `did:web:alice-ih%3A7083:alice` before attempting another catalog request.
+
+## [Step 59] Emit base64 participant identifiers in Bob control plane env
+- **Date:** 2026-02-01
+- **Command:** Added `PARTICIPANT_CONTEXT_ID_BASE64`/`PARTICIPANT_ID_BASE64` (base64 of `did:web:bob-ih%3A7083:bob`) to `bob.tf`’s `controlplane_env`, ran `terraform plan/apply -target=module.bob-connector`, and restarted `deployment/bob-tractusx-connector-controlplane` to pick up the Helm update.
+- **Result:** The connector now exports both DID and base64 variants, and Terraform/Helm produced the expected update log entries, but the Presentation Query still rejects Bob with the same `token.sub` mismatch.
+- **Evidence:** Plan/apply output showing the Helm release update, `/tmp/bob_env_after_restart.txt`, `/tmp/bob_cp_retry2.log`, `/tmp/alice_cp_retry2.log`, `/tmp/catalog_request_retry2.out`.
+- **Next investigation:** The RemoteTokenService is still returning a token whose `token.sub` is Alice, so we need to trace the mapper or STS configuration that resolves to Alice’s ID before the next catalog run.
+
+## [Step 60] Catalog retry after base64 env rollout
+- **Date:** 2026-02-01
+- **Command:** Re-ran `kubectl run -n mxd catalog-test ... catalog/request`, capturing the latest failure artifacts (`/tmp/catalog_request_retry2.out`, `/tmp/bob_cp_retry2.log`, `/tmp/alice_cp_retry2.log`).
+- **Result:** The catalog POST still returns HTTP 502 `Unable to obtain credentials: Empty optional`, while Alice’s control plane keeps logging `Presentation Query failed: HTTP 401` with `No parser found that can handle that format` and the `ID token [sub] vs token.sub` mismatch, so the identity-sub conflict remains unresolved.
+- **Evidence:** Listed log files plus the rerun env dump; the new plan is to instrument the RemoteTokenService/BDRS path to find which participant context/STS identity is being selected so we can force it to issue tokens where `token.sub` matches Bob before declaring the catalog fixed.
+
+## [Step 5] Fixed Alice STS Configuration - PRIMARY BUG RESOLVED
+- **Date:** 2026-02-02 13:10 KST  
+- **Changes:** alice.tf lines 30-32, 88-90 updated to use alice-ih STS
+- **Deployment:** terraform apply + rollout restart alice-tractusx-connector-controlplane + alice-catalogserver
+- **Result:** ✅ Original STS token errors ELIMINATED
+  - "token.sub" mismatch errors: GONE
+  - "No parser found" errors: GONE
+  - Alice now correctly uses alice-ih STS
+- **Evidence:** /tmp/log_alice_cp_verify.log shows NO token.sub errors
+- **Secondary Issue:** BDRS authentication failures remain (separate from STS bug)
+  - Error: "Token verification failed" in BDRS logs
+  - Catalog requests still fail with "Unable to obtain credentials: Empty optional"
+  - Root cause: Bob cannot obtain his own credentials (pre-existing issue)

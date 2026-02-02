@@ -28,8 +28,8 @@ module "alice-connector" {
   dcp-config = {
     id                     = var.alice-did
     sts_token_url          = "http://alice-ih:7084/api/sts/token"
-    sts_client_id          = var.alice-did
-    sts_clientsecret_alias = "${var.alice-did}-sts-client-secret"
+    sts_client_id          = "did:web:alice-ih%3A7083:alice"
+    sts_clientsecret_alias = "alice-sts-client-secret"
   }
   dataplane = {
     privatekey-alias = "${var.alice-did}#signing-key-1"
@@ -85,9 +85,9 @@ module "alice-catalog-server" {
   }
   dcp-config = {
     id                     = var.alice-did
-    sts_token_url          = "${module.alice-identityhub.sts-token-url}/token"
-    sts_client_id          = var.alice-did
-    sts_clientsecret_alias = "${var.alice-did}-sts-client-secret"
+    sts_token_url          = "http://alice-ih:7084/api/sts/token"
+    sts_client_id          = "did:web:alice-ih%3A7083:alice"
+    sts_clientsecret_alias = "alice-sts-client-secret"
   }
   useSVE = var.useSVE
 }
