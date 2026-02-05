@@ -1,0 +1,21 @@
+# Terraform generated/runtime (machine-specific)
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+tfplan
+
+# temp artifacts
+tmp/
+
+# big debug artifacts
+*.heapsnapshot
+
+# agent scratch
+.sisyphus/
+.claude/
+
+# logs (optional but recommended)
+port-forward.log
+*.log
