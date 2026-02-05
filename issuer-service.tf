@@ -15,6 +15,7 @@ module "dataspace-issuer" {
   source            = "./modules/issuerservice"
   humanReadableName = "dataspace-issuer-service"
   participantId     = "did:web:dataspace-issuer" // todo: change
+  superuser_apikey  = var.issuer-superuser-apikey
   database = {
     user     = "issuer"
     password = "issuer"
@@ -25,14 +26,9 @@ module "dataspace-issuer" {
   namespace   = kubernetes_namespace.mxd-ns.metadata.0.name
   useSVE      = var.useSVE
   env = {
-    # [수정] 자바가 기동될 때 가장 먼저 읽는 JAVA_TOOL_OPTIONS에 직접 주입합니다.
     "JDK_JAVA_OPTIONS" = "--add-opens java.base/java.lang=ALL-UNNAMED"
-
-  } 
-   
+  }
 }
-
-
 
 module "dataspace-issuer-postgres" {
   depends_on       = [kubernetes_config_map.issuer-initdb-config]
@@ -61,4 +57,13 @@ module "consumer-vault" {
   humanReadableName = "dataspace-issuer-vault"
   namespace         = kubernetes_namespace.mxd-ns.metadata.0.name
   vault-token       = "root"
+
+  # Seed secrets for issuer vault - uses local.issuer_key_json defined in alice.tf
+  seed_secrets = {
+    "key-1"                  = local.issuer_key_json
+    "statuslist-signing-key" = local.issuer_key_json
+    "issuer-secret"          = "password"
+    "password"               = "password"
+    "api-key"                = "password"
+  }
 }

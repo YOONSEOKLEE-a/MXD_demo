@@ -23,24 +23,29 @@ resource "kubernetes_service" "ih-service" {
     }
     # we need a stable IP, otherwise there will be a cycle with the issuer
     port {
-      name = "credentials"
-      port = var.ports.credentials-api
+      name        = "credentials"
+      port        = var.ports.credentials-api
+      target_port = var.ports.credentials-api
     }
     port {
-      name = "debug"
-      port = var.ports.debug
+      name        = "debug"
+      port        = var.ports.debug
+      target_port = var.ports.debug
     }
     port {
-      name = "identity"
-      port = var.ports.ih-identity-api
+      name        = "identity"
+      port        = var.ports.ih-identity-api
+      target_port = var.ports.ih-identity-api
     }
     port {
-      name = "did"
-      port = var.ports.ih-did
+      name        = "did"
+      port        = var.ports.ih-did
+      target_port = var.ports.ih-did
     }
     port {
-      name = "sts"
-      port = var.ports.sts-api
+      name        = "sts"
+      port        = var.ports.sts-api
+      target_port = var.ports.sts-api
     }
   }
 }

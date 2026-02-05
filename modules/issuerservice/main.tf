@@ -92,11 +92,11 @@ resource "kubernetes_deployment" "issuerservice" {
             period_seconds    = 5
             timeout_seconds   = 30
           }
-         env {
-            name  = "WEB_HTTP_PORT"  # 구형 이름표 추가
+          env {
+            name  = "WEB_HTTP_PORT" # 구형 이름표 추가
             value = "10010"
-      	}
-	env {
+          }
+          env {
             name  = "EDC_WEB_HTTP_IDENTITY_PORT"
             value = "10015"
           }
@@ -112,11 +112,11 @@ resource "kubernetes_deployment" "issuerservice" {
             name  = "WEB_HTTP_IDENTITY_PATH"
             value = "/api/identity"
           }
-         env {
+          env {
             name  = "WEB_HTTP_MANAGEMENT_PORT" # 구형 이름표 추가 (8181 탈출용)
             value = "8182"
-	}
-         
+          }
+
           readiness_probe {
             http_get {
               path = "/api/check/readiness"
@@ -139,7 +139,7 @@ resource "kubernetes_deployment" "issuerservice" {
         }
       }
     }
-  }	
+  }
 }
 
 resource "kubernetes_config_map" "issuerservice-config" {
@@ -167,20 +167,20 @@ resource "kubernetes_config_map" "issuerservice-config" {
     WEB_HTTP_DID_PORT                       = var.ports.did
     WEB_HTTP_DID_PATH                       = "/"
 
-    JAVA_TOOL_OPTIONS = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1044"
-    EDC_VAULT_HASHICORP_URL            = var.vault-url
-    EDC_VAULT_HASHICORP_TOKEN          = var.vault-token
-    EDC_DATASOURCE_DEFAULT_URL         = var.database.url
-    EDC_DATASOURCE_DEFAULT_USER        = var.database.user
-    EDC_DATASOURCE_DEFAULT_PASSWORD    = var.database.password
-    EDC_SQL_SCHEMA_AUTOCREATE          = true
-    EDC_IAM_ACCESSTOKEN_JTI_VALIDATION = true
-    EDC_IAM_DID_WEB_USE_HTTPS          = false
-    EDC_IAM_ISSUER_ID                       = "did:web:dataspace-issuer"
-    EDC_PARTICIPANT_ID                      = "did:web:dataspace-issuer"
-    EDC_IAM_STS_OAUTH_TOKEN_URL             = "http://dataspace-issuer-server:8080/token"
-    EDC_IAM_STS_OAUTH_CLIENT_ID             = "issuer"
-    EDC_IAM_STS_OAUTH_CLIENT_SECRET_ALIAS   = "issuer-secret"
+    JAVA_TOOL_OPTIONS                     = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1044"
+    EDC_VAULT_HASHICORP_URL               = var.vault-url
+    EDC_VAULT_HASHICORP_TOKEN             = var.vault-token
+    EDC_VAULT_HASHICORP_API_SECRET_PATH   = "/v1/secret"
+    EDC_DATASOURCE_DEFAULT_URL            = var.database.url
+    EDC_DATASOURCE_DEFAULT_USER           = var.database.user
+    EDC_DATASOURCE_DEFAULT_PASSWORD       = var.database.password
+    EDC_SQL_SCHEMA_AUTOCREATE             = true
+    EDC_IAM_ACCESSTOKEN_JTI_VALIDATION    = true
+    EDC_IAM_DID_WEB_USE_HTTPS             = false
+    EDC_IAM_ISSUER_ID                     = "did:web:dataspace-issuer"
+    EDC_PARTICIPANT_ID                    = "did:web:dataspace-issuer"
+    EDC_IAM_STS_OAUTH_TOKEN_URL           = "http://dataspace-issuer-server:8080/token"
+    EDC_IAM_STS_OAUTH_CLIENT_ID           = "issuer"
+    EDC_IAM_STS_OAUTH_CLIENT_SECRET_ALIAS = "issuer-secret"
   }
 }
-

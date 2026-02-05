@@ -21,16 +21,16 @@ terraform {
   required_version = ">= 1.0"
   required_providers {
     helm = {
-      source = "hashicorp/helm"
+      source  = "hashicorp/helm"
       version = "~> 2.11.0"
     }
     // for generating passwords, clientsecrets etc.
     random = {
-      source = "hashicorp/random"
+      source  = "hashicorp/random"
       version = "~> 3.5.0"
     }
     kubernetes = {
-      source = "hashicorp/kubernetes"
+      source  = "hashicorp/kubernetes"
       version = "~> 2.23.0"
     }
   }
@@ -54,6 +54,8 @@ module "azurite" {
 
 locals {
   trudy-azure-key-base64 = base64encode(var.trudy-azure-account-key)
+
+  issuer_key_json = file("${path.module}/assets/issuer.key.json")
 }
 
 resource "kubernetes_namespace" "mxd-ns" {

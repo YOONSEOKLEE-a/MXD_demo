@@ -1,0 +1,63 @@
+{
+  "@context": [
+    "https://w3id.org/edc/connector/management/v0.0.1",
+    {
+      "tx": "https://w3id.org/tractusx/v0.0.1/ns/"
+    },
+    {
+      "tx-auth": "https://w3id.org/tractusx/auth/"
+    },
+    {
+      "cx-policy": "https://w3id.org/catenax/policy/"
+    }
+  ],
+  "@type": "ContractRequest",
+  "counterPartyAddress": "http://alice-cs:8082/api/dsp",
+  "protocol": "dataspace-protocol-http",
+  "counterPartyId": "did:web:alice-ih%3A7083:alice",
+  "policy": {
+    "@type": "Offer",
+    "@id": "bWVtYmVyc2hpcC1yZXF1aXJlZC1kZWY=:YXNzZXQtMQ==:YzYwNjk4NDctMWRhYy00OTE5LWFjMzgtN2I5YTBjYzAzNjQ4",
+    "assigner": "did:web:alice-ih%3A7083:alice",
+    "target": "asset-1",
+    "odrl:permission": {
+      "odrl:action": {
+        "@id": "odrl:use"
+      },
+      "odrl:constraint": {
+        "odrl:and": [
+          {
+            "odrl:leftOperand": {
+              "@id": "https://w3id.org/catenax/2025/9/policy/Membership"
+            },
+            "odrl:operator": {
+              "@id": "odrl:eq"
+            },
+            "odrl:rightOperand": "active"
+          },
+          {
+            "odrl:leftOperand": {
+              "@id": "https://w3id.org/catenax/2025/9/policy/FrameworkAgreement"
+            },
+            "odrl:operator": {
+              "@id": "odrl:eq"
+            },
+            "odrl:rightOperand": "DataExchangeGovernance:1.0"
+          },
+          {
+            "odrl:leftOperand": {
+              "@id": "https://w3id.org/catenax/2025/9/policy/UsagePurpose"
+            },
+            "odrl:operator": {
+              "@id": "odrl:eq"
+            },
+            "odrl:rightOperand": "cx.core.sustainability:1"
+          }
+        ]
+      }
+    },
+    "odrl:prohibition": [],
+    "odrl:obligation": []
+  },
+  "callbackAddresses": []
+}

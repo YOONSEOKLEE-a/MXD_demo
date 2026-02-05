@@ -116,32 +116,40 @@ resource "kubernetes_config_map" "identityhub-config" {
 
   data = {
     # IdentityHub variables
-    EDC_IH_IAM_ID                      = var.participantId
-    EDC_IAM_DID_WEB_USE_HTTPS          = false
-    EDC_IH_IAM_PUBLICKEY_ALIAS         = local.public-key-alias
-    EDC_IH_API_SUPERUSER_KEY           = var.ih_superuser_apikey
-    WEB_HTTP_PORT                      = var.ports.web
-    WEB_HTTP_PATH                      = "/api"
-    WEB_HTTP_IDENTITY_PORT             = var.ports.ih-identity-api
-    WEB_HTTP_IDENTITY_PATH             = "/api/identity"
-    WEB_HTTP_IDENTITY_AUTH_KEY         = "password"
-    WEB_HTTP_CREDENTIALS_PORT          = var.ports.credentials-api
-    WEB_HTTP_CREDENTIALS_PATH          = "/api/credentials"
-    WEB_HTTP_DID_PORT                  = var.ports.ih-did
-    WEB_HTTP_DID_PATH                  = "/"
-    WEB_HTTP_STS_PORT                  = var.ports.sts-api
-    WEB_HTTP_STS_PATH                  = var.sts-token-path
-    JAVA_TOOL_OPTIONS                  = "${var.useSVE ? "-XX:UseSVE=0 " : ""}-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${var.ports.debug}"
-    EDC_IAM_STS_PRIVATEKEY_ALIAS       = var.aliases.sts-private-key
-    EDC_IAM_STS_PUBLICKEY_ID           = var.aliases.sts-public-key-id
-    EDC_MVD_CREDENTIALS_PATH           = "/etc/credentials/"
-    EDC_VAULT_HASHICORP_URL            = var.vault-url
-    EDC_VAULT_HASHICORP_TOKEN          = var.vault-token
-    EDC_DATASOURCE_DEFAULT_URL         = var.database.url
-    EDC_DATASOURCE_DEFAULT_USER        = var.database.user
-    EDC_DATASOURCE_DEFAULT_PASSWORD    = var.database.password
-    EDC_SQL_SCHEMA_AUTOCREATE          = true
-    EDC_IAM_ACCESSTOKEN_JTI_VALIDATION = true
+    EDC_IH_IAM_ID                                              = var.participantId
+    EDC_IAM_DID_WEB_USE_HTTPS                                  = false
+    EDC_IH_IAM_PUBLICKEY_ALIAS                                 = local.public-key-alias
+    EDC_IH_API_SUPERUSER_KEY                                   = var.ih_superuser_apikey
+    WEB_HTTP_PORT                                              = var.ports.web
+    WEB_HTTP_PATH                                              = "/api"
+    WEB_HTTP_IDENTITY_PORT                                     = var.ports.ih-identity-api
+    WEB_HTTP_IDENTITY_PATH                                     = "/api/identity"
+    WEB_HTTP_IDENTITY_AUTH_KEY                                 = "password"
+    WEB_HTTP_CREDENTIALS_PORT                                  = var.ports.credentials-api
+    WEB_HTTP_CREDENTIALS_PATH                                  = "/api/credentials"
+    WEB_HTTP_DID_PORT                                          = var.ports.ih-did
+    WEB_HTTP_DID_PATH                                          = "/"
+    WEB_HTTP_STS_PORT                                          = var.ports.sts-api
+    WEB_HTTP_STS_PATH                                          = var.sts-token-path
+    EDC_WEB_SERVER_REQUEST_LOG_ENABLED                         = true
+    EDC_WEB_SERVER_REQUEST_LOG_FORMAT                          = "%m %U %s %O"
+    JAVA_TOOL_OPTIONS                                          = "${var.useSVE ? "-XX:UseSVE=0 " : ""}-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${var.ports.debug}"
+    EDC_LOGGER_LEVEL                                           = "DEBUG"
+    ORG_ECLIPSE_EDC_IDENTITYHUB_API_VERIFIABLECREDENTIAL_LEVEL = "TRACE"
+    ORG_ECLIPSE_EDC_IDENTITYHUB_CORE_SERVICES_QUERY_LEVEL      = "TRACE"
+    ORG_ECLIPSE_EDC_IDENTITYHUB_API_VALIDATION_LEVEL           = "DEBUG"
+    ORG_ECLIPSE_EDC_IDENTITYHUB_SPI_VERIFICATION_LEVEL         = "DEBUG"
+    EDC_IAM_STS_PRIVATEKEY_ALIAS                               = var.aliases.sts-private-key
+    EDC_IAM_STS_PUBLICKEY_ID                                   = var.aliases.sts-public-key-id
+    EDC_MVD_CREDENTIALS_PATH                                   = "/etc/credentials/"
+    EDC_VAULT_HASHICORP_URL                                    = var.vault-url
+    EDC_VAULT_HASHICORP_TOKEN                                  = var.vault-token
+    EDC_VAULT_HASHICORP_API_SECRET_PATH                        = "/v1/secret"
+    EDC_DATASOURCE_DEFAULT_URL                                 = var.database.url
+    EDC_DATASOURCE_DEFAULT_USER                                = var.database.user
+    EDC_DATASOURCE_DEFAULT_PASSWORD                            = var.database.password
+    EDC_SQL_SCHEMA_AUTOCREATE                                  = true
+    EDC_IAM_ACCESSTOKEN_JTI_VALIDATION                         = true
   }
 }
 

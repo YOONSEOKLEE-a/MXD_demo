@@ -25,16 +25,42 @@ SELECT
   'did:web:alice-ih%3A7083:alice',
   'did:web:alice-ih%3A7083:alice',
   'alice',
-  'did:web:alice-ih%3A7083:alice-sts-client-secret',
+  'alice-sts-client-secret',
   'key-1',
   'key-1',
   (extract(epoch from now())*1000)::bigint
 WHERE NOT EXISTS (
-  SELECT 1 FROM public.edc_sts_client WHERE client_id='did:web:alice-ih%3A7083:alice'
+SELECT 1 FROM public.edc_sts_client WHERE client_id='did:web:alice-ih%3A7083:alice'
 );
 
--- 2) 결과 확인
-SELECT client_id, secret_alias, private_key_alias FROM public.edc_sts_client WHERE client_id LIKE '%alice%';
+-- 2) Bob STS client 등록 (Alice STS가 Bob 토큰을 발급할 수 있도록)
+INSERT INTO public.edc_sts_client
+(id, client_id, did, name, secret_alias, private_key_alias, public_key_reference, created_at)
+SELECT
+  'bob-sts-client',
+  'did:web:bob-ih%3A7083:bob',
+  'did:web:bob-ih%3A7083:bob',
+  'bob',
+  'bob-sts-client-secret',
+  'key-1',
+  'key-1',
+  (extract(epoch from now())*1000)::bigint
+WHERE NOT EXISTS (
+SELECT 1 FROM public.edc_sts_client WHERE client_id='did:web:bob-ih%3A7083:bob'
+);
+
+-- 3) Bob STS client alias 정리
+UPDATE public.edc_sts_client
+SET secret_alias='bob-sts-client-secret'
+WHERE client_id='did:web:bob-ih%3A7083:bob';
+
+-- 4) Alice STS client alias 정리
+UPDATE public.edc_sts_client
+SET secret_alias='alice-sts-client-secret'
+WHERE client_id='did:web:alice-ih%3A7083:alice';
+
+-- 4) 결과 확인
+SELECT client_id, secret_alias, private_key_alias FROM public.edc_sts_client WHERE client_id IN ('did:web:alice-ih%3A7083:alice','did:web:bob-ih%3A7083:bob');
 SQL
 "
 

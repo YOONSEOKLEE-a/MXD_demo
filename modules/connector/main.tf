@@ -17,7 +17,30 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
 
+locals {
+  jdbcUrl                         = "jdbc:postgresql://${var.database-host}:${var.database-port}/${var.database-name}"
+  edc-blobstore-endpoint-template = "${var.azure-url}/%s"
+  azure-sas-token                 = jsonencode({ edctype = "dataspaceconnector:azuretoken", sas = var.azure-account-key-sas })
+  minio-url                       = var.minio-config.url
 
+  # Base postStart commands
+  base_poststart_commands = [
+    "sleep 5",
+    "/bin/vault kv put secret/edc.aws.access.key content=${var.minio-config.username}",
+    "/bin/vault kv put secret/edc.aws.secret.access.key content=${var.minio-config.password}",
+    "/bin/vault kv put secret/${var.azure-account-name}-key content=${var.azure-account-key}",
+    "/bin/vault kv put secret/${var.azure-account-name}-sas content='${local.azure-sas-token}'",
+  ]
+
+  # Additional seed secrets commands  
+  seed_commands = [
+    for name, content in var.vault_seed_secrets :
+    "/bin/vault kv put secret/${name} content='${replace(content, "'", "'\\''")}'"
+  ]
+
+  # Combined postStart script
+  poststart_script = join(" && ", concat(local.base_poststart_commands, local.seed_commands))
+}
 
 resource "helm_release" "connector" {
   name              = lower(var.humanReadableName)
@@ -30,7 +53,7 @@ resource "helm_release" "connector" {
 
   repository = "https://eclipse-tractusx.github.io/charts/dev"
   chart      = "tractusx-connector"
-  version    = "0.9.0"
+  version    = "0.11.2"
 
   values = [
     file("${path.module}/values.yaml"),
@@ -41,13 +64,7 @@ resource "helm_release" "connector" {
           "postStart" : [
             "sh",
             "-c",
-            join(" && ", [
-              "sleep 5",
-              "/bin/vault kv put secret/edc.aws.access.key content=${var.minio-config.username}",
-              "/bin/vault kv put secret/edc.aws.secret.access.key content=${var.minio-config.password}",
-              "/bin/vault kv put secret/${var.azure-account-name}-key content=${var.azure-account-key}",
-              "/bin/vault kv put secret/${var.azure-account-name}-sas content='${local.azure-sas-token}'",
-            ])
+            local.poststart_script
           ]
         }
       }
@@ -93,8 +110,13 @@ resource "helm_release" "connector" {
         }
       }
       controlplane : {
-        env : {
-          "TX_SSI_ENDPOINT_AUDIENCE" : "http://${kubernetes_service.controlplane-service.metadata.0.name}:8084/api/v1/dsp"
+        policy : {
+          validation : {
+            enabled : false
+          }
+        }
+        env : merge({
+          "TX_SSI_ENDPOINT_AUDIENCE" : var.dcp-config.id
           "EDC_DSP_CALLBACK_ADDRESS" : "http://${kubernetes_service.controlplane-service.metadata.0.name}:8084/api/v1/dsp"
           "EDC_HOSTNAME" : "${var.humanReadableName}-tractusx-connector-controlplane"
           "EDC_BLOBSTORE_ENDPOINT_TEMPLATE" : local.edc-blobstore-endpoint-template
@@ -104,7 +126,7 @@ resource "helm_release" "connector" {
           "EDC_IAM_TRUSTED-ISSUER_DATASPACE-ISSUER_ID" : "did:web:dataspace-issuer"
           "EDC_IAM_TRUSTED-ISSUER_DATASPACE-ISSUER_SUPPORTEDTYPES" : "[\"*\"]"
           "EDC_COMPONENT_ID" : var.humanReadableName
-        }
+        }, var.controlplane_env)
         bdrs : {
           server : {
             url : "http://bdrs-server:8082/api/directory"
@@ -145,6 +167,11 @@ resource "helm_release" "connector" {
   }
 
   set {
+    name  = "participant.contextId"
+    value = var.participantContextId
+  }
+
+  set {
     name  = "postgresql.jdbcUrl"
     value = local.jdbcUrl
   }
@@ -174,11 +201,4 @@ resource "kubernetes_config_map" "participants-map" {
   data = {
     "participants.json" = file(var.participant-list-file)
   }
-}
-
-locals {
-  jdbcUrl                         = "jdbc:postgresql://${var.database-host}:${var.database-port}/${var.database-name}"
-  edc-blobstore-endpoint-template = "${var.azure-url}/%s"
-  azure-sas-token                 = jsonencode({ edctype = "dataspaceconnector:azuretoken", sas = var.azure-account-key-sas })
-  minio-url                       = var.minio-config.url
 }

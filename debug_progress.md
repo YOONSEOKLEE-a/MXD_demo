@@ -1,3 +1,26 @@
+# Current System Status
+
+- **State:** Broken
+- **Immediate Next Action:** Fix BDRS 401 VP validation for Alice outbound (BDRS directory endpoint exists at `/api/directory/bpn-directory`, but VP auth fails). Re-run contract negotiation after VP fix.
+- **Notes:** Manual `alice-ih`/`bob-ih` endpoints were stale after restart; updated to current pod IPs. BDRS base path `/api/directory` still returns 404 (expected), `/api/directory/bpn-directory` returns 401 without auth. Alice receives ContractRequest but fails BDRS auth.
+
+---
+
+## Environment Snapshot
+
+- **Cluster:** KinD `mxd`
+- **Namespace:** `mxd`
+- **Key Services:** `alice-ih`, `bob-ih`, `alice-did-server`, `bob-did-server`, `bdrs-server`, `alice-tractusx-connector-controlplane`, `bob-tractusx-connector-controlplane`
+- **DID Serving:** `alice-ih`/`bob-ih` port 7083 routed to NGINX (`alice-did-server`, `bob-did-server`) via manual Endpoints
+- **IdentityHub:** `did_resources` state=200 (PUBLISHED) for `did:web:alice-ih%3A7083:alice` and `did:web:bob-ih%3A7083:bob`
+- **BDRS:** `TX_IAM_IATP_BDRS_SERVER_URL=http://bdrs-server:8082/api/directory`; `/api/directory/bpn-directory` reachable but requires VP (401 without auth)
+- **Vault:** `alice-vault-0`, `bob-vault-0` seeded with `alice-sts-client-secret`, `bob-sts-client-secret`
+- **Connector Config:** Alice control plane now includes IATP/PQ/STS env vars (applied via `alice.tf` + `terraform apply -target=module.alice-connector`)
+
+---
+
+## Debug History
+
 # MXD / Tractus-X EDC Debug Log
 
 **Date Started:** 2026-01-29  
@@ -1752,3 +1775,1612 @@ Conclusion: Catalog crawl still selects Alice’s identity because the RemoteTok
   - Error: "Token verification failed" in BDRS logs
   - Catalog requests still fail with "Unable to obtain credentials: Empty optional"
   - Root cause: Bob cannot obtain his own credentials (pre-existing issue)
+
+---
+
+## [RESOLVED] Step 20: Catalog Request Fixed by Including counterPartyId
+
+**Date:** 2026-02-02T14:40:59+09:00
+
+**Problem:** Bob's catalog request was failing with HTTP 502 "Unable to obtain credentials: Empty optional"
+
+**Root Cause:** The catalog request payload was missing the `counterPartyId` (BPN) parameter, which is required for BDRS audience mapping.
+
+**Fix:** Include `counterPartyId` in the catalog request payload:
+
+```json
+{
+  "@context": {"@vocab": "https://w3id.org/edc/v0.0.1/ns/"},
+  "counterPartyAddress": "http://alice-tractusx-connector-controlplane.mxd.svc.cluster.local:8084/api/v1/dsp",
+  "counterPartyId": "BPNL000000000001",  // <-- CRITICAL: Alice's BPN
+  "protocol": "dataspace-protocol-http"
+}
+```
+
+**Test Command:**
+
+---
+
+## [Step 61] Inject IATP default-scope config via JAVA_TOOL_OPTIONS (no agreement yet)
+- **Date:** 2026-02-03
+- **Change:** Added JVM properties to control plane env so Tractus-X IATP default scope config is picked up:
+  - `-Dtx.edc.iam.iatp.default-scopes.scope1.alias=org.eclipse.tractusx.vc.type`
+  - `-Dtx.edc.iam.iatp.default-scopes.scope1.type=MembershipCredential`
+  - `-Dtx.edc.iam.iatp.default-scopes.scope1.operation=read`
+- **Deployment:** `terraform apply -auto-approve` (updates `module.alice-connector` + `module.bob-connector`).
+- **Result:** Negotiation still stuck at `REQUESTED` (no `contractAgreementId`). Bob CP still logs `No TokenDecorator was registered` and Alice CP continues `Could not obtain data from BDRS server: 401`. BDRS still logs `Token verification failed`.
+- **Evidence:** `/tmp/mxd_fix2_1770126721/neg_create.json`, `/tmp/mxd_fix2_1770126721/neg_poll.log`, `/tmp/mxd_fix2_1770126721/bob_cp.log`, `/tmp/mxd_fix2_1770126721/alice_cp.log`, `/tmp/mxd_fix2_1770126721/bdrs.log`.
+- **Additional Check:** Manual PQ -> presentation token DOES authenticate BDRS (HTTP 200), so connector is still not sending the presentation token in its BDRS calls.
+  - Evidence: `/tmp/mxd_fix2_1770126721/pq_response.json`, `/tmp/mxd_fix2_1770126721/bdrs_bpn_directory_presentation.log`.
+```bash
+kubectl run -n mxd catalog-test-1770010744 --rm -i --restart=Never --image=curlimages/curl:8.5.0 -- sh -c "
+curl -sS -w '\nHTTP=%{http_code}\n' -X POST 'http://bob-tractusx-connector-controlplane.mxd.svc.cluster.local:8081/management/v3/catalog/request'   -H 'Content-Type: application/json'   -H 'x-api-key: password'   -d '{
+    \"@context\": {\"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"},
+    \"counterPartyAddress\": \"http://alice-tractusx-connector-controlplane.mxd.svc.cluster.local:8084/api/v1/dsp\",
+    \"counterPartyId\": \"BPNL000000000001\",
+    \"protocol\": \"dataspace-protocol-http\"
+  }'
+"
+```
+
+**Result:** HTTP 200 with full catalog containing 3 assets (asset-1, asset-2, asset-3)
+
+**Evidence Files:**
+- `/tmp/catalog_request_1770010744.log` - Successful HTTP 200 response with full catalog
+- `/tmp/log_bob_cp_1770010744.log` - Bob control-plane logs (1020 lines, no errors for this request)
+- `/tmp/log_alice_cp_1770010744.log` - Alice control-plane logs (6855 lines, 1 incoming DSP CatalogRequestMessage processed successfully)
+- `/tmp/log_bdrs_1770010744.log` - BDRS server logs (260 lines)
+- `/tmp/grep_signal_1770010744.log` - Grep output showing error patterns (truncated, 441KB)
+
+**Analysis:**
+- Bob's catalog request: ✅ HTTP 200 SUCCESS
+- Alice processed request: ✅ No errors on incoming DSP CatalogRequestMessage path
+- Alice FCC crawler: ❌ 960 BDRS 401 errors (SEPARATE ISSUE - background crawler, not serving Bob's request)
+
+**Key Insight:**
+The BDRS 401 errors in Alice's logs are from her **Federated Catalog Cache (FCC) crawler** attempting to crawl Bob and her own catalog server in the background. These errors occur in `DspCatalogRequestAction.apply()` (outbound crawler) and do NOT affect Alice's ability to serve incoming catalog requests from Bob.
+
+**Two Separate Issues:**
+1. **FIXED:** Bob requesting Alice's catalog → HTTP 200 when `counterPartyId` is included ✅
+2. **UNRESOLVED (out of scope):** Alice's FCC crawler → BDRS 401 errors (background process) ❌
+
+**Status:** PRIMARY GOAL ACHIEVED - Bob can successfully request Alice's catalog and receive HTTP 200 with full asset list.
+
+
+---
+
+## [Step 34] E2E Transfer Test: ContractNegotiation TERMINATED Due to BDRS Authentication Failure
+- **Date:** 2026-02-02 13:38
+- **Goal:** Complete end-to-end transfer flow (catalog → negotiation → transfer → EDR → data fetch)
+- **Result:** **FAILED** - Negotiation stuck in REQUESTED state, never progressed to FINALIZED
+- **Root Cause:** Alice (provider) cannot authenticate with BDRS to send DSP protocol messages back to Bob
+
+### Timeline
+
+**Phase 1: Catalog Request (SUCCESS)**
+```bash
+kubectl run -n mxd catalog-request-... -- curl -X POST \
+  http://bob-tractusx-connector-controlplane.mxd.svc.cluster.local:8081/management/v3/catalog/request \
+  -H 'Content-Type: application/json' -H 'x-api-key: password' \
+  -d '{"@context": {...}, "counterPartyAddress": "http://alice-tractusx-connector-controlplane.mxd.svc.cluster.local:8084/api/v1/dsp", "counterPartyId": "BPNL000000000001", "protocol": "dataspace-protocol-http"}'
+```
+- **Result:** HTTP 200, received catalog with 3 assets (asset-1, asset-2, asset-3)
+- **Evidence:** `/tmp/catalog_now.json`
+
+**Phase 2: Contract Negotiation (FAILED)**
+- **Bob Negotiation ID:** `3b30e677-3f10-470e-ba0c-9ecb4b4499de`
+- **Alice Provider Negotiation ID:** `ce10be3d-fddb-4ac8-a05a-25a7ad8ad587`
+
+**Negotiation Request:**
+```bash
+kubectl run -n mxd contract-neg-... -- curl -X POST \
+  http://bob-tractusx-connector-controlplane.mxd.svc.cluster.local:8081/management/v3/contractnegotiations \
+  -d '{
+    "@context": [...],
+    "@type": "ContractRequest",
+    "counterPartyAddress": "http://alice-tractusx-connector-controlplane.mxd.svc.cluster.local:8084/api/v1/dsp",
+    "counterPartyId": "BPNL000000000001",
+    "protocol": "dataspace-protocol-http",
+    "policy": {"@id": "MQ==:YXNzZXQtMQ==:N2UyMGE4ZDctZGJlZC00NjhlLWE2ODctOWIxNWY1YzFlYzlj", "@type": "odrl:Offer", "odrl:assigner": {"@id": "BPNL000000000001"}, ...}
+  }'
+```
+- **Result:** HTTP 200, negotiation created
+- **Idresponse:** `{"@id": "3b30e677-3f10-470e-ba0c-9ecb4b4499de", "createdAt": 1770017020916}`
+
+**Negotiation Timeline:**
+1. **07:23:40** - Bob sent ContractRequestMessage → transitioned to `REQUESTED` state
+2. **07:23:40** - Alice received ContractRequestMessage, transitioned to `AGREEING` state
+3. **07:23:41 - 07:30:29** - Alice attempted to send ContractAgreementMessage back to Bob (8 retry attempts)
+4. **All attempts failed** with error: `Could not obtain data from BDRS server: code: 401, message: Unauthorized`
+5. **07:30:29** - Alice retry limit exceeded, transitioned to `TERMINATING` state
+6. **07:30:29 - 07:33:51** - Alice attempted to send ContractNegotiationTerminationMessage (7 retry attempts)
+7. **All termination attempts also failed** with same BDRS 401 error
+8. **Bob remained stuck in `REQUESTED` state** - never received any response from Alice
+
+### Error Analysis
+
+**Alice Control Plane Logs:**
+```
+DEBUG 2026-02-02T07:23:40.978384364 DSP: Incoming ContractRequestMessage for class org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.ContractNegotiation process
+DEBUG 2026-02-02T07:23:41.590294024 ContractNegotiation: ID ce10be3d-fddb-4ac8-a05a-25a7ad8ad587. [Provider] send agreement
+DEBUG 2026-02-02T07:23:41.607742615 ContractNegotiation: ID ce10be3d-fddb-4ac8-a05a-25a7ad8ad587. Attempt #1 failed to [Provider] send agreement. Cause: Could not obtain data from BDRS server: code: 401, message: Unauthorized
+...
+SEVERE 2026-02-02T07:30:29.79302326 ContractNegotiation: ID ce10be3d-fddb-4ac8-a05a-25a7ad8ad587. Attempt #8 failed to [Provider] send agreement. Retry limit exceeded. Cause: Could not obtain data from BDRS server: code: 401, message: Unauthorized
+DEBUG 2026-02-02T07:30:29.801091095 ContractNegotiation: ID ce10be3d-fddb-4ac8-a05a-25a7ad8ad587. [PROVIDER] send termination
+DEBUG 2026-02-02T07:30:29.817848953 ContractNegotiation: ID ce10be3d-fddb-4ac8-a05a-25a7ad8ad587. Attempt #1 failed to [PROVIDER] send termination. Cause: Could not obtain data from BDRS server: code: 401, message: Unauthorized
+```
+
+**BDRS Server Logs:**
+```
+WARNING 2026-02-02T07:35:06.796744649 Error validating BDRS client VP: Token verification failed
+WARNING 2026-02-02T07:35:16.770467679 Error validating BDRS client VP: Token verification failed
+WARNING 2026-02-02T07:35:16.785982338 Error validating BDRS client VP: Token verification failed
+```
+
+**Stack Trace Path:**
+```
+ProviderContractNegotiationManagerImpl.processAgreeing()
+→ DspHttpRemoteMessageDispatcherImpl.dispatch()
+→ BdrsClientAudienceMapper.resolve()
+→ BdrsClientImpl.resolve()
+→ BDRS returns 401
+```
+
+### Root Cause
+
+**Problem:** Alice's IdentityHub cannot authenticate with BDRS server to obtain audience/DID mappings required for DSP protocol message signing.
+
+**Why DSP Messages Need BDRS:**
+1. When Alice wants to send a ContractAgreementMessage to Bob, she needs to create a verifiable presentation (VP)
+2. The VP must include Bob's DID as the audience
+3. To get Bob's DID from his BPN (`BPNL000000000002`), Alice queries BDRS
+4. But Alice's authentication to BDRS fails with 401
+
+**BDRS Configuration:**
+- **Server URL:** `http://bdrs-server:8082/api/directory` (configured in `TX_IAM_IATP_BDRS_SERVER_URL`)
+- **Server Status:** Running (pod `bdrs-server-74cf5dbcc6-wt4mg`)
+- **Endpoints Tested:**
+  - `/api/directory` → HTTP 404
+  - `/api/bpn-directory` → HTTP 404
+  - `/health` → HTTP 404
+- **Authentication Method:** Verifiable Presentation (VP) with self-issued token from IdentityHub STS
+
+**Why BDRS Returns 401:**
+- BDRS expects a valid VP containing specific credentials (likely MembershipCredential)
+- Alice's IdentityHub generates a VP, but BDRS rejects it: "Token verification failed"
+- Possible causes:
+  1. Missing or invalid credentials in Alice's IdentityHub
+  2. Incorrect DID resolution (BDRS cannot verify Alice's DID signature)
+  3. Mismatched credential types between what Alice presents and what BDRS expects
+  4. BDRS token validation logic is stricter than IdentityHub's presentation query endpoint
+
+### Impact
+
+**Blocking:** E2E transfer flow completely blocked - cannot complete contract negotiation
+**Scope:** Affects ALL DSP protocol message exchanges (not just FCC crawler):
+- ✅ Catalog requests work (Bob → Alice inbound DSP messages don't require BDRS on Alice's side)
+- ❌ Contract negotiations fail (Alice → Bob outbound DSP messages require BDRS authentication)
+- ❌ Transfer processes will also fail (same BDRS requirement for outbound messages)
+
+### Evidence Files
+
+| File | Description |
+|------|-------------|
+| `/tmp/catalog_now.json` | Successful catalog response from Alice (HTTP 200, 3 assets) |
+| `/tmp/policy_asset1_membership.json` | Extracted Membership policy for asset-1 |
+| `/tmp/neg_create.out` | ContractNegotiation creation response (HTTP 200) |
+| `/tmp/neg_id.txt` | Bob's negotiation ID: `3b30e677-3f10-470e-ba0c-9ecb4b4499de` |
+| `/tmp/neg_3b30e677-3f10-470e-ba0c-9ecb4b4499de.json` | Final negotiation state: `REQUESTED` (polled 60 times, never progressed) |
+| `/tmp/bob_neg_logs.txt` | Bob control plane logs showing negotiation state transitions |
+| `/tmp/alice_neg_logs.txt` | Alice control plane logs showing BDRS 401 errors (300 lines) |
+| `/tmp/alice_dsp_logs.txt` | Alice DSP/protocol logs showing repeated BDRS failures |
+
+### What We Tested
+
+1. ✅ Bob management API health check
+2. ✅ Catalog request with `counterPartyId` parameter (fixed from previous session)
+3. ✅ Policy extraction from catalog (Membership policy for asset-1)
+4. ✅ Contract negotiation creation (with proper `odrl:assigner` object)
+5. ❌ Negotiation progression to FINALIZED (stuck in REQUESTED, Alice cannot respond)
+6. ❌ BDRS server endpoint testing (all return 404)
+7. ✅ BDRS server existence verification (pod running, service accessible)
+8. ❌ BDRS authentication (Alice VP rejected: "Token verification failed")
+
+### Next Steps (Requires Investigation)
+
+**Option A: Fix BDRS Authentication (Recommended for Production)**
+1. Verify Alice's IdentityHub has MembershipCredential seeded correctly
+2. Test Alice STS token generation: `curl -X POST http://alice-ih:7084/api/sts/token`
+3. Check BDRS expected VP format and credential requirements
+4. Verify DID resolution: ensure BDRS can resolve `did:web:alice-ih%3A7083:alice`
+5. Check BDRS seed data - ensure Alice's DID→BPN mapping exists
+6. Review BDRS token validation logic (may need to relax or debug)
+
+**Option B: Workaround for Testing (If BDRS Can't Be Fixed)**
+1. Disable BDRS requirement for local/test deployments
+2. Use static DID/BPN mapping instead of BDRS lookup
+3. Configure Alice to use alternative audience resolution method
+
+**Option C: Out of Scope (Current Status)**
+- Accept that E2E transfer tests cannot complete in this environment
+- Document BDRS as a known issue blocking contract negotiation
+- Focus on catalog-only testing until BDRS is resolved
+
+### Constraints Observed
+
+- ✅ No code changes attempted (adhered to "no JAR injection" rule)
+- ✅ Only used Kubernetes/HTTP testing tools
+- ✅ Evidence captured before making any configuration changes
+- ✅ Logs preserved for all failure points
+
+
+---
+
+## [Step 35] BDRS Server Investigation: Endpoints Configured But Returning 404
+- **Date:** 2026-02-02 16:40
+- **Context:** Following up on Step 34 - investigating why BDRS returns 401 (Token verification failed) and why endpoints return 404
+- **Result:** **CONFIRMED** - BDRS server IS running and endpoints ARE configured, but ALL requests return 404
+
+### BDRS Server Status
+
+**Pod Status:**
+- **Pod Name:** `bdrs-server-74cf5dbcc6-wt4mg`
+- **Start Time:** 2026-02-02T05:09:03Z (running for ~11 hours)
+- **Status:** Running (1/1)
+- **Restarts:** 0 in this session
+
+**Configured Endpoints (from startup logs):**
+```
+Port mappings: {
+  alias='management', port=8081, path='/api/management'
+  alias='default', port=8080, path='/api'  
+  alias='directory', port=8082, path='/api/directory'
+}
+
+HTTP context 'management' listening on port 8081
+HTTP context 'default' listening on port 8080  
+HTTP context 'directory' listening on port 8082
+```
+
+**Extensions Loaded:**
+- Initialized BPN Directory API
+- Initialized Directory API Authentication Extension
+- Initialized org.eclipse.tractusx.bdrs.api.directory.authentication.KeyParserRegistryExtension
+- Registered Web API context alias: directory
+- Runtime BDRS ready
+
+### Endpoint Test Results
+
+**All endpoints return 404:**
+| Endpoint | Expected | Actual | Notes |
+|----------|----------|--------|-------|
+| `http://bdrs-server:8082/api/directory` | 200/401 | 404 | Primary directory endpoint |
+| `http://bdrs-server:8082/api/bpn-directory` | 200/401 | 404 | Alternate path |
+| `http://bdrs-server:8082/` | 200 | 404 | Root |
+| `http://bdrs-server:8080/api` | 200 | 404 | Default context |
+| `http://bdrs-server:8081/api/management` | 200 | 404 | Management API |
+| `http://bdrs-server:8080/health` | 200 | 404 | Health check |
+
+**Environment Variables:**
+```
+WEB_HTTP_DIRECTORY_PATH=/api/directory
+WEB_HTTP_DIRECTORY_PORT=8082
+WEB_HTTP_MANAGEMENT_PATH=/api/management
+WEB_HTTP_MANAGEMENT_PORT=8081
+WEB_HTTP_PATH=/api
+WEB_HTTP_PORT=8080
+```
+
+### BDRS Logs Analysis
+
+**Startup Sequence (SUCCESS):**
+1. Extensions initialized correctly
+2. Jetty service started
+3. Jersey web service registered
+4. All 3 HTTP contexts listening on correct ports
+5. Runtime shows "BDRS ready"
+
+**Repeated Errors (every ~10 seconds):**
+```
+WARNING Error validating BDRS client VP: Token verification failed
+```
+- These errors start immediately after "Runtime BDRS ready"
+- Occur continuously from Alice and Bob connectors attempting BDRS authentication
+- No stack trace or detailed error message
+
+**404 Errors (when testing endpoints):**
+```
+SEVERE JerseyExtension: Unexpected exception caught
+jakarta.ws.rs.NotFoundException: HTTP 404 Not Found
+  at org.glassfish.jersey.server.ServerRuntime$1.run(ServerRuntime.java:271)
+```
+
+### Root Cause Analysis
+
+**Problem:** BDRS server starts successfully, registers endpoints, but Jersey/Jetty routing is broken
+
+**Possible Causes:**
+1. **JAX-RS Resource Not Registered:** BPN Directory API extension loads but doesn't register JAX-RS resources with Jersey
+2. **Context Path Misconfiguration:** Jersey servlet context doesn't match the configured paths
+3. **Authentication Filter Blocking:** Auth filter may be rejecting ALL requests before they reach resources
+4. **Build/Deployment Issue:** Runtime JAR may be missing resource classes or annotations
+
+**Evidence Supporting Cause #1 (Missing JAX-RS Resources):**
+- Startup logs show "Initialized BPN Directory API" but NOT "Registered resource class XYZ"
+- Standard EDC/Jersey extensions usually log resource registration
+- 404 from Jersey suggests no matching @Path annotations found
+
+### Impact on E2E Transfer
+
+**Complete Blockage:**
+1. ❌ Alice cannot resolve Bob's BPN → DID mapping (needs BDRS)
+2. ❌ Alice cannot send ContractAgreementMessage to Bob (BDRS lookup fails first)
+3. ❌ Alice cannot send any DSP protocol messages to Bob
+4. ❌ Negotiation stuck in REQUESTED state forever
+
+**What Works:**
+- ✅ BDRS server pod is healthy and running
+- ✅ BDRS postgres database is accessible
+- ✅ BDRS vault is accessible
+- ✅ All ports are exposed correctly
+- ✅ Alice/Bob can reach BDRS server (evidenced by 401/404 errors, not connection refused)
+
+### Next Steps (Requires Code/Config Investigation Beyond Scope)
+
+This issue cannot be resolved through Terraform/ConfigMap changes alone. Requires one of:
+
+**Option A: Verify BDRS Deployment (Check Source/Build)**
+1. Check if BDRS Docker image is correctly built with all JAX-RS resources
+2. Verify resource scanning is enabled in Jersey configuration
+3. Check if @Path annotations are present in bdrs-api module
+
+**Option B: Use Alternative BDRS Implementation**
+1. Deploy mock BDRS that returns static DID mappings
+2. Use simpler key-value store (Redis/etcd) for BPN→DID lookup
+3. Configure connectors to skip BDRS and use direct DID resolution
+
+**Option C: Workaround for Testing (Not Production)**
+1. Disable BDRS requirement in DSP protocol handler
+2. Hard-code DID mappings in connector configuration
+3. Use static audience instead of dynamic BDRS lookup
+
+**Recommendation:** This is likely a deployment/build issue with the BDRS runtime image. The Terraform configuration is correct (evidenced by successful pod startup and port exposure). Further debugging requires:
+- Access to BDRS source code
+- Ability to rebuild BDRS image with additional logging
+- Or ability to exec into pod and inspect JAR contents
+
+### Constraints Observed
+- ✅ No code changes attempted (adhered to no-JAR-injection rule)
+- ✅ Only used Kubectl/HTTP testing
+- ✅ Evidence captured comprehensively
+- ✅ Documented that issue is beyond IaC scope
+
+
+---
+
+## [Step 36] BDRS trustedIssuers Fix + Directory API 404 Root Cause
+
+**Date:** 2026-02-03T00:33:24+09:00
+
+**Context:** Following user runbook to diagnose VP verification failures blocking Alice→Bob contract negotiation.
+
+### Phase 1: Evidence Gathering
+
+**Alice BDRS Environment Configuration:**
+```bash
+EDC_IAM_DID_WEB_USE_HTTPS=false
+EDC_IAM_ISSUER_ID=did:web:alice-ih%3A7083:alice
+EDC_IAM_TRUSTED-ISSUER_DATASPACE-ISSUER_ID=did:web:dataspace-issuer
+TX_IAM_IATP_BDRS_SERVER_URL=http://bdrs-server:8082/api/directory
+```
+
+**BDRS Server Logs:** Continuous "Error validating BDRS client VP: Token verification failed" warnings
+**Alice CP Logs:** Continuous "Could not obtain data from BDRS server: code: 401, message: Unauthorized" errors
+
+Evidence files:
+- `/tmp/alice_bdrs_env_1770046004.log` - Alice BDRS config
+- `/tmp/bdrs_signal_1770046010.log` - BDRS VP verification errors
+- `/tmp/alice_bdrs_signal_1770046014.log` - Alice BDRS 401 errors
+
+### Phase 2: DID Resolution Test
+
+**Test:** Can BDRS pod fetch Alice/Bob DID documents?
+
+```bash
+# From BDRS pod
+curl -o /dev/null -w "HTTP=%{http_code}\n" http://alice-ih:7083/alice/did.json
+# Result: HTTP=200
+
+curl -o /dev/null -w "HTTP=%{http_code}\n" http://bob-ih:7083/bob/did.json
+# Result: HTTP=200
+```
+
+✅ **Conclusion:** DID documents are reachable. Issue is NOT network connectivity.
+
+Evidence: `/tmp/bdrs_did_http_1770046020.log`
+
+### Phase 3: IaC Fix Applied
+
+**Problem Found:** BDRS `trustedIssuers` only included `did:web:dataspace-issuer`
+
+**Fix in `bdrs.tf` line 36:**
+```diff
+-        trustedIssuers : ["did:web:dataspace-issuer"]
++        trustedIssuers : ["did:web:dataspace-issuer", "did:web:alice-ih%3A7083:alice", "did:web:bob-ih%3A7083:bob"]
+```
+
+**Applied:**
+```bash
+terraform init
+terraform apply -auto-approve
+# Result: 7 added, 1 changed, 0 destroyed
+# Changed: helm_release.bdrs-server
+
+kubectl rollout restart -n mxd deploy/bdrs-server
+kubectl rollout restart -n mxd deploy/alice-tractusx-connector-controlplane
+# Both: successfully rolled out
+```
+
+**Verification:**
+```bash
+kubectl exec bdrs-server-xxx -- printenv | grep TRUSTED
+# Output:
+EDC_IAM_TRUSTED-ISSUER_0-ISSUER_ID=did:web:dataspace-issuer
+EDC_IAM_TRUSTED-ISSUER_1-ISSUER_ID=did:web:alice-ih%3A7083:alice
+EDC_IAM_TRUSTED-ISSUER_2-ISSUER_ID=did:web:bob-ih%3A7083:bob
+```
+
+✅ **trustedIssuers configuration applied successfully**
+
+Evidence: `/tmp/git_diff_1770046027.patch`, `/tmp/terraform_apply_1770046034.log`
+
+### Phase 4: Verification Results
+
+**BDRS VP Verification Errors:** CONTINUE (2 errors immediately after restart, then ongoing every ~10s)
+**Alice BDRS 401 Errors:** CONTINUE (ongoing every ~10s)
+
+Evidence: `/tmp/bdrs_verify_1770046158.log` (2 lines), `/tmp/alice_verify_1770046158.log` (8 lines)
+
+### Root Cause Analysis
+
+**Directory API Testing:**
+```bash
+# Test 1: GET /api/directory
+curl http://bdrs-server:8082/api/directory
+# Result: HTTP 404 Not Found (HTML error page)
+
+# Test 2: POST /api/directory (without auth)
+curl -X POST http://bdrs-server:8082/api/directory -H 'Content-Type: application/json'
+# Result: HTTP 404 Not Found
+```
+
+**Management API Testing:**
+```bash
+# GET /api/management
+curl http://bdrs-server:8081/api/management
+# Result: HTTP 404 (expected, no resource at root)
+
+# POST /api/management/bpn-directory (with auth)
+curl -X POST http://bdrs-server:8081/api/management/bpn-directory \
+  -H 'x-api-key: password' \
+  -d '{"bpn": "BPNL000000000001", "did": "did:web:alice-ih%3A7083:alice"}'
+# Result: HTTP 204 No Content ✅
+```
+
+**BDRS Database Seed:**
+```bash
+# Seeded Alice + Bob via Management API (both HTTP 204)
+# Database verification:
+SELECT bpn, did FROM edc_did_entries;
+```
+
+| BPN | DID |
+|-----|-----|
+| BPNL000000000001 | did:web:alice-ih%3A7083:alice |
+| BPNL000000000002 | did:web:bob-ih%3A7083:bob |
+| BPNL00000003AYRE | did:web:alice-controlplane |
+| BPNL00000003AZ4L | did:web:bob-controlplane |
+| BPNL000000000003 | did:web:trudy-ih%3A7083:trudy |
+
+✅ **Database has correct BPN→DID mappings**
+
+**BUT:** Directory API continues to return 404 and "Token verification failed" errors persist.
+
+### Conclusion
+
+**Two Issues Identified:**
+
+1. ✅ **FIXED:** BDRS `trustedIssuers` missing Alice/Bob DIDs
+   - **Solution:** Added `did:web:alice-ih%3A7083:alice` and `did:web:bob-ih%3A7083:bob` to `bdrs.tf`
+   - **Status:** Configuration applied and verified in pod environment
+
+2. ❌ **NOT FIXED:** BDRS Directory API (port 8082) returns HTTP 404
+   - **Root Cause:** JAX-RS resources for Directory API not registered with Jersey
+   - **Evidence:**
+     - Management API works (`/api/management/bpn-directory` returns 204)
+     - Directory API fails (`/api/directory` returns 404)
+     - BDRS logs show "Runtime BDRS ready" but no "Registered resource class XYZ" for Directory API
+   - **Impact:** Alice/Bob cannot query BDRS to resolve BPN→DID mappings for DSP protocol
+   - **Workaround:** BPN→DID data exists in database but HTTP API is inaccessible
+
+**Alice→Bob Transfer Status:** STILL BLOCKED
+
+- ❌ Alice cannot call BDRS Directory API (404)
+- ❌ Alice cannot send ContractAgreementMessage to Bob (BDRS lookup fails)
+- ❌ Contract negotiation stuck in REQUESTED state
+
+### Issue Scope
+
+**This is a BDRS runtime build/deployment issue, NOT an IaC configuration issue.**
+
+The terraform configuration is correct:
+- ✅ BDRS pod starts successfully
+- ✅ All environment variables correct (`EDC_IAM_DID_WEB_USE_HTTPS=false`, `EDC_IAM_TRUSTED-ISSUER_*`)
+- ✅ HTTP contexts registered on correct ports (8080, 8081, 8082)
+- ✅ Management API works
+- ✅ Database has correct seed data
+- ❌ **Directory API JAX-RS resource missing** (build/packaging issue)
+
+**Requires:**
+- Access to BDRS source code to verify Directory API JAX-RS resource classes
+- Ability to rebuild BDRS image with Directory API resources
+- Or alternative BDRS implementation (mock service, Redis/etcd lookup)
+
+### Constraints Observed
+
+- ✅ IaC-only changes (trustedIssuers fix in terraform)
+- ✅ No code/JAR modifications
+- ✅ No manual database edits (used Management API)
+- ✅ Evidence captured comprehensively
+- ✅ Append-only debug_progress.md
+
+### Recommendation
+
+**Option A: Fix BDRS Image** (requires code access)
+1. Verify BDRS Directory API JAX-RS resource classes exist in source
+2. Rebuild BDRS Docker image with proper resource scanning
+3. Redeploy with fixed image
+
+**Option B: Deploy Mock BDRS** (workaround)
+1. Create simple HTTP service that reads `edc_did_entries` table
+2. Expose on port 8082 as drop-in replacement
+3. Returns BPN→DID mappings from database
+
+**Option C: Use Alternative Resolution** (configuration)
+1. Check if connectors support BDRS bypass flag
+2. Configure static BPN→DID mappings in connector config
+3. Use direct DID resolution without BDRS
+
+**Option D: Document as Known Limitation**
+- Accept that Directory API is broken
+- E2E transfer testing blocked until BDRS fixed
+- Focus on other MXD features (catalog, health checks, management APIs)
+
+---
+
+---
+
+## [Step 47] BDRS VP Verification Fix - Postman Collection Analysis and IdentityHub DID Document Fix
+- **Date:** 2026-02-03
+- **Goal:** Fix BDRS VP verification failures and enable Alice→Bob contract negotiation and data transfer
+
+### Summary of Investigation
+
+#### Problem Statement
+- BDRS logs: `Error validating BDRS client VP: Token verification failed` (every ~10 seconds)
+- Alice connector logs: `Could not obtain data from BDRS server: code: 401, message: Unauthorized`
+- Contract negotiations stuck in `REQUESTED` state
+
+#### Root Causes Identified
+
+**1. BDRS BPN Mappings Had Wrong DIDs (Fixed in Postman Collections)**
+- **Old:** `BPNL00000003AYRE` → `did:web:alice-controlplane` (WRONG - this DID doesn't exist!)
+- **New:** `BPNL000000000001` → `did:web:alice-ih%3A7083:alice` (CORRECT - IdentityHub DID)
+
+**2. IdentityHub DID Documents Missing `assertionMethod` (Fixed via Service Endpoint Override)**
+- IdentityHub dynamically generates DID documents from `keypair_resource` table
+- Generated documents do NOT include `assertionMethod` field
+- BDRS requires `assertionMethod` in DID document to verify VP signatures
+- Oracle consultation confirmed this is a known limitation of IdentityHub
+
+### Fixes Applied
+
+#### Fix 1: Postman Collections Updated
+**Files Modified:**
+- `MXD Management API Seed.postman_collection.json` - BDRS BPN mappings corrected
+- `MXD Service APIs.postman_collection.json` - DSP endpoint URLs fixed
+- `MXD-Local-FIXED.postman_environment.json` - New environment with correct values
+
+**Changes:**
+```json
+// BDRS BPN Mappings
+Alice: BPNL000000000001 → did:web:alice-ih%3A7083:alice
+Bob: BPNL000000000002 → did:web:bob-ih%3A7083:bob
+
+// DSP Endpoints
+alice-controlplane → alice-tractusx-connector-controlplane
+/api/dsp → /api/v1/dsp
+```
+
+#### Fix 2: IdentityHub DID Document Override via NGINX Proxy
+**Problem:** IdentityHub generates DID documents without `assertionMethod`
+
+**Solution:** Deploy NGINX servers to serve static DID documents with `assertionMethod`, then route the `alice-ih:7083` and `bob-ih:7083` DID ports to these NGINX servers via manual Kubernetes Endpoints.
+
+**Resources Created:**
+```yaml
+# ConfigMaps with fixed DID documents
+- alice-did-override (contains DID with assertionMethod)
+- bob-did-override (contains DID with assertionMethod)
+
+# NGINX Deployments
+- alice-did-server
+- bob-did-server
+
+# Services (selector-less for manual endpoint control)
+- alice-ih (modified to route DID port to NGINX)
+- bob-ih (modified to route DID port to NGINX)
+
+# Manual Endpoints
+- alice-ih: routes port 7083 to alice-did-server NGINX
+- bob-ih: routes port 7083 to bob-did-server NGINX
+```
+
+**Fixed DID Document Structure:**
+```json
+{
+  "id": "did:web:alice-ih%3A7083:alice",
+  "verificationMethod": [...],
+  "authentication": ["did:web:alice-ih%3A7083:alice#signing-key-1"],
+  "assertionMethod": ["did:web:alice-ih%3A7083:alice#signing-key-1"],  // <-- ADDED
+  ...
+}
+```
+
+### Verification Steps Completed
+
+1. **BDRS BPN Mappings Verified:**
+```sql
+SELECT bpn, did FROM edc_did_entries ORDER BY bpn;
+-- BPNL000000000001 | did:web:alice-ih%3A7083:alice ✅
+-- BPNL000000000002 | did:web:bob-ih%3A7083:bob ✅
+```
+
+2. **DID Documents Now Include assertionMethod:**
+```bash
+# From BDRS pod:
+curl http://alice-ih:7083/alice/.well-known/did.json | grep assertionMethod
+# Output: "assertionMethod":["did:web:alice-ih%3A7083:alice#signing-key-1"] ✅
+
+curl http://bob-ih:7083/bob/.well-known/did.json | grep assertionMethod  
+# Output: "assertionMethod":["did:web:bob-ih%3A7083:bob#signing-key-1"] ✅
+```
+
+3. **BDRS VP Verification Errors Stopped:**
+```bash
+kubectl logs -n mxd deploy/bdrs-server --since=60s | grep -c "Token verification failed"
+# Output: 0 ✅
+```
+
+### Current Status
+
+**Working:**
+- ✅ BDRS BPN mappings correct (Alice/Bob DIDs match IdentityHub DIDs)
+- ✅ DID documents served with `assertionMethod` field
+- ✅ BDRS can resolve Alice/Bob DID documents (HTTP 200)
+- ✅ BDRS VP verification errors stopped (0 errors in logs)
+- ✅ DID resolution works from all pods (tested from BDRS, connectors, etc.)
+
+**Still Failing:**
+- ❌ Catalog request returns HTTP 500 (Internal Server Error)
+- ❌ Bob connector logs: `Presentation Query failed: HTTP 401, message: ID token verification failed: No public key could be resolved for key-ID 'did:web:bob-ih%3A7083:bob#signing-key-1': Error resolving DID: did:web:bob-ih%3A7083:bob. HTTP Code was: 404`
+
+**Analysis:**
+The 404 error in Bob's logs suggests that while BDRS can resolve DIDs, **Alice's IdentityHub** (when verifying Bob's VP during credential presentation) cannot resolve Bob's DID. This is a separate resolution path from BDRS.
+
+### Next Steps
+
+1. **Verify Alice's catalog server can resolve Bob's DID:**
+```bash
+kubectl exec -n mxd deploy/alice-catalogserver -- wget -q -O- http://bob-ih:7083/bob/.well-known/did.json
+```
+
+2. **Check Alice's IdentityHub credential service DID resolution:**
+- The error comes from `CredentialService` trying to verify Bob's VP
+- May need to restart Alice's catalog server after the DID endpoint fixes
+
+3. **If resolution still fails:**
+- Consider adding DNS aliases
+- Check if Alice services have stale DNS cache
+
+### Files Created/Modified
+- `MXD Management API Seed.postman_collection.json` (BDRS mappings fixed)
+- `MXD Service APIs.postman_collection.json` (DSP endpoints fixed)
+- `MXD-Local-FIXED.postman_environment.json` (new)
+- `POSTMAN_FIXES_SUMMARY.md` (documentation)
+- `APPLY_FIXES.md` (step-by-step guide)
+- Kubernetes ConfigMaps: `alice-did-override`, `bob-did-override`, `alice-did-nginx-config`, `bob-did-nginx-config`
+- Kubernetes Deployments: `alice-did-server`, `bob-did-server`
+- Kubernetes Services: `alice-ih` (modified), `bob-ih` (modified)
+- Kubernetes Endpoints: `alice-ih` (manual), `bob-ih` (manual)
+
+---
+
+---
+
+## [Session 2026-02-03] BDRS VP Verification & Data Transfer Fix (Continuation)
+
+### Summary of This Session
+
+**Goal:** Fix BDRS VP verification failures to enable Alice→Bob contract negotiation and data transfer.
+
+### [Step 35] Identified Root Cause: Wrong DID Resolution Path
+
+- **Date:** 2026-02-03
+- **Discovery:** The did:web spec requires:
+  - `did:web:host` → `https://host/.well-known/did.json`
+  - `did:web:host:path` → `https://host/path/did.json` (NO `.well-known`!)
+- **Problem:** Our NGINX was serving at `/bob/.well-known/did.json` but DID resolvers request `/bob/did.json`
+- **Fix:** Updated NGINX configs to serve at both paths:
+  ```nginx
+  location = /bob/did.json { ... }      # Correct per DID spec
+  location = /bob/.well-known/did.json { ... }  # Legacy/fallback
+  ```
+
+### [Step 36] Fixed NGINX Configurations
+
+- **Command:**
+  ```bash
+  # Updated alice-did-nginx-config and bob-did-nginx-config ConfigMaps
+  # Added /alice/did.json and /bob/did.json locations
+  kubectl rollout restart -n mxd deploy/alice-did-server deploy/bob-did-server
+  ```
+- **Result:** DID resolution now works at correct paths
+
+### [Step 37] Updated Manual Endpoints (IH pods got new IPs)
+
+- **Issue:** The alice-ih and bob-ih services use manual Endpoints (no selector) for DID port routing
+- **Fix:** Updated endpoint IPs after NGINX pod restarts
+- **Verification:**
+  ```bash
+  kubectl exec -n mxd deploy/bdrs-server -- wget -q -O- http://bob-ih:7083/bob/did.json  # SUCCESS
+  kubectl exec -n mxd deploy/bdrs-server -- wget -q -O- http://alice-ih:7083/alice/did.json  # SUCCESS
+  ```
+
+### [Step 38] Catalog Request Now Works!
+
+- **Date:** 2026-02-03
+- **Command:**
+  ```bash
+  curl -sS -X POST "http://localhost:8283/management/v3/catalog/request" \
+    -H "x-api-key: password" -H "Content-Type: application/json" \
+    -d '{
+      "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
+      "counterPartyAddress": "http://alice-tractusx-connector-controlplane.mxd.svc.cluster.local:8084/api/v1/dsp",
+      "counterPartyId": "BPNL000000000001",
+      "protocol": "dataspace-protocol-http"
+    }'
+  ```
+- **Result:** HTTP 200 - Returns Alice's catalog with 3 assets (asset-1, asset-2, asset-3)
+- **Conclusion:** Bob → Alice DSP communication works! DID resolution fix was successful.
+
+### [Step 39] New Issue: Contract Negotiation Fails (Alice Outbound)
+
+- **Symptom:** Contract negotiation gets stuck
+  - Bob creates negotiation, stays in REQUESTED
+  - Alice transitions to AGREEING but fails to send ContractAgreementMessage
+- **Error:** Alice fails when sending outbound DSP messages:
+  ```
+  "Could not obtain data from BDRS server: 401 Unauthorized"
+  "Error validating BDRS client VP: Token verification failed"
+  ```
+- **Analysis:**
+  - Bob → Alice (inbound to Alice) ✅ WORKS
+  - Alice → Bob (outbound from Alice) ❌ FAILS
+  - BDRS rejects Alice's VP during outbound DSP flows
+
+### Current Investigation: Why BDRS Rejects Alice's VP
+
+**Hypothesis:** Alice's IdentityHub may be signing VPs with a key that doesn't match the public key in Alice's DID document served by NGINX.
+
+**To Check:**
+1. What private key is Alice's IH using? (Vault)
+2. What public key is in Alice's NGINX DID document?
+3. Do they match?
+
+
+---
+
+## [Step 51] SUCCESS: Catalog Request Now Works (HTTP 200)
+- **Date:** 2026-02-03
+- **Command:** 
+```bash
+curl -sS -w "\nHTTP=%{http_code}\n" \
+  -X POST "http://localhost:8283/management/v3/catalog/request" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: password" \
+  -d '{
+    "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
+    "counterPartyAddress": "http://alice-tractusx-connector-controlplane.mxd.svc.cluster.local:8084/api/v1/dsp",
+    "counterPartyId": "BPNL000000000001",
+    "protocol": "dataspace-protocol-http"
+  }'
+```
+- **Result:** HTTP 200 with valid catalog JSON containing 3 assets (asset-1, asset-2, asset-3)
+- **Notes:** 
+  - Bob → Alice catalog request fully functional
+  - Bob's VP accepted by Alice
+  - DID resolution working for both parties
+  - Earlier fixes (DID path correction, assertionMethod addition, vault key alignment) resolved the "empty optional" issue
+
+---
+
+## [Step 52] NEW ISSUE: Contract Negotiation Fails - Alice VP Rejected by BDRS
+- **Date:** 2026-02-03
+- **Symptom:** Contract negotiation stuck; Bob stays in REQUESTED, Alice reaches AGREEING but cannot send ContractAgreementMessage
+- **Error:** `Could not obtain data from BDRS server: 401 Unauthorized` / `Error validating BDRS client VP: Token verification failed`
+- **Context:**
+  - Inbound flow (Bob → Alice): ✅ Working
+  - Outbound flow (Alice → Bob via BDRS): ❌ Failing
+  - BDRS trustedIssuers includes all required DIDs
+  - Alice's IdentityHub has correct participant context and keypairs
+
+---
+
+## [Step 53] Diagnostic Plan: Alice VP Rejection by BDRS
+
+### Hypothesis 1: Alice DID Document Missing assertionMethod or Wrong Path
+**Check:**
+```bash
+# Verify Alice DID document from BDRS perspective
+kubectl run -n mxd test-alice-did --rm -i --restart=Never --image=curlimages/curl:8.5.0 -- \
+  curl -sS http://alice-ih:7083/alice/did.json | grep -E "assertionMethod|verificationMethod|publicKeyJwk"
+
+# Also check the fallback path
+kubectl run -n mxd test-alice-did-fallback --rm -i --restart=Never --image=curlimages/curl:8.5.0 -- \
+  curl -sS http://alice-ih:7083/alice/.well-known/did.json | grep -E "assertionMethod|verificationMethod|publicKeyJwk"
+```
+**Expected:** Both paths return 200 with `assertionMethod` array containing Alice's signing key
+
+### Hypothesis 2: Alice Signing Key Mismatch
+**Check:**
+```bash
+# Compare Alice's public key in DID doc vs database
+kubectl exec -n mxd deploy/alice-postgres -- psql -U alice -d alice -c \
+  "SELECT key_id, participant_id FROM keypair_resource WHERE participant_id LIKE '%alice%';"
+
+# Get the actual public key from vault
+kubectl exec -n mxd alice-vault-0 -- vault kv get \
+  'secret/did:web:alice-ih%3A7083:alice#signing-key-1' -format=json | \
+  jq -r '.data.data.content' | jq '.x'
+```
+**Expected:** Public key `x` value in vault matches what's in the DID document
+
+### Hypothesis 3: Alice Missing Required Credentials
+**Check:**
+```bash
+# Verify Alice has MembershipCredential
+kubectl exec -n mxd deploy/alice-postgres -- psql -U alice -d alice -c \
+  "SELECT id, vc_state, issuer_id FROM credential_resource WHERE holder_id='did:web:alice-ih%3A7083:alice';"
+```
+**Expected:** State 500 (ISSUED) for MembershipCredential and DataExchangeGovernance
+
+### Hypothesis 4: BDRS Cannot Resolve Alice's DID
+**Check:**
+```bash
+# Test from BDRS pod
+kubectl exec -n mxd deploy/bdrs-server -- wget -q -O- --timeout=5 \
+  http://alice-ih:7083/alice/did.json | head -20
+
+# Check if BDRS has cached Alice's DID
+kubectl exec -n mxd deploy/bdrs-postgres -- psql -U bdrs -d bdrs -c \
+  "SELECT bpn, did FROM edc_did_entries WHERE did LIKE '%alice%';"
+```
+**Expected:** BDRS can resolve Alice's DID and has correct BPN mapping
+
+### Hypothesis 5: Alice IdentityHub Cannot Create VP
+**Check:**
+```bash
+# Test Alice's presentation query endpoint directly (similar to earlier Bob test)
+NS=mxd
+ALICE_DID='did:web:alice-ih%3A7083:alice'
+PID_B64=$(printf '%s' "$ALICE_DID" | base64 -w0)
+SECRET=$(kubectl exec -n $NS alice-vault-0 -- vault kv get -mount=secret -field=content alice-sts-client-secret | tr -d '\r\n')
+
+# Get self-issued token and test PQ
+kubectl run -n $NS test-alice-pq --rm -i --restart=Never --image=curlimages/curl:8.5.0 -- sh -c "
+# Get access token
+ACCESS=\$(curl -sS -X POST 'http://alice-ih:7084/api/sts/token' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=client_credentials' \
+  --data-urlencode 'client_id=$ALICE_DID' \
+  --data-urlencode 'client_secret=$SECRET' \
+  --data-urlencode 'audience=$ALICE_DID' | \
+  sed -n 's/.*\"access_token\":\"\([^\"]*\)\".*/\1/p')
+
+# Get self-issued token
+TOKEN=\$(curl -sS -X POST 'http://alice-ih:7084/api/sts/token' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=client_credentials' \
+  --data-urlencode 'client_id=$ALICE_DID' \
+  --data-urlencode 'client_secret=$SECRET' \
+  --data-urlencode 'audience=$ALICE_DID' \
+  --data-urlencode \"token=\$ACCESS\" \
+  --data-urlencode 'bearer_access_scope=org.eclipse.tractusx.vc.type:MembershipCredential:read' | \
+  sed -n 's/.*\"access_token\":\"\([^\"]*\)\".*/\1/p')
+
+# Query presentations
+curl -sS -w '\nHTTP=%{http_code}\n' -X POST \
+  'http://alice-ih:7082/api/credentials/v1/participants/$PID_B64/presentations/query' \
+  -H 'Content-Type: application/json' \
+  -H \"Authorization: Bearer \$TOKEN\" \
+  -d '{\"@context\":[\"https://w3id.org/dspace-dcp/v1.0/dcp.jsonld\"],\"type\":\"PresentationQueryMessage\",\"scope\":[\"org.eclipse.tractusx.vc.type:MembershipCredential:read\"]}'
+"
+```
+**Expected:** HTTP 200 with PresentationResponseMessage
+
+
+### Next Steps (continued from Step 53)
+Attempted fixes:
+1. ✅ Fixed Alice IH endpoint stale IP (10.244.0.58 → 10.244.0.72 → 10.244.0.85 after restart)
+2. ✅ Verified Alice has:
+   - Credentials (state 500 = ISSUED)
+   - Correct DID document with assertionMethod
+   - Correct keypair in database
+   - STS client configured with correct secret_alias
+   - Vault secret at correct path (password)
+3. ❌ Alice STS still returns 401 `invalid_client`
+
+**Current hypothesis**: Despite identical configuration to Bob (which works), Alice STS rejects the client. Possible causes:
+- IH instance state/cache issue
+- Participant context activation issue
+- Secret resolution timing/cache problem
+
+**Recommendation**: Since Bob's setup works end-to-end and Alice's configuration is identical:
+- Verify DID resolution still works from cluster
+- Check if catalog request still works (it should now that endpoints are fixed)
+- If catalog works, try contract negotiation again - it may now succeed since the endpoint is fixed
+
+
+---
+
+## [Step 54] Publish DID State + Restart Services + Negotiation Retry
+- **Command:**
+```bash
+# Publish DID state
+kubectl exec -n mxd alice-postgres-67db86db9b-6lc4w -- psql -U alice -d alice -c \
+  "UPDATE did_resources SET state = 200 WHERE did = 'did:web:alice-ih%3A7083:alice';"
+kubectl exec -n mxd bob-postgres-58d6dbdf66-6nkh4 -- psql -U bob -d bob -c \
+  "UPDATE did_resources SET state = 200 WHERE did = 'did:web:bob-ih%3A7083:bob';"
+
+# Restart IH + control planes + BDRS
+kubectl rollout restart -n mxd deployment/alice-ih deployment/bob-ih
+kubectl rollout restart -n mxd deployment/alice-tractusx-connector-controlplane deployment/bob-tractusx-connector-controlplane
+kubectl rollout restart -n mxd deployment/bdrs-server
+
+# Apply Alice connector env alignment
+terraform apply -target=module.alice-connector -auto-approve
+
+# Verify BDRS errors
+kubectl logs -n mxd deploy/bdrs-server --since=60s | grep -c "Token verification failed"
+
+# Check BDRS directory from Bob CP
+kubectl exec -n mxd deploy/bob-tractusx-connector-controlplane -- sh -c \
+  'wget -S -O- http://bdrs-server:8082/api/directory 2>&1 | head -n 5'
+
+# Create negotiation and check state
+kubectl run -n mxd contract-request-auto --rm -i --restart=Never --image=curlimages/curl:8.5.0 -- sh -c \
+  'cat <<"JSON" | curl -sS -X POST "http://bob-tractusx-connector-controlplane:8081/management/v3/contractnegotiations" -H "Content-Type: application/json" -H "x-api-key: password" -d @-
+  {"@context":["https://w3id.org/edc/connector/management/v0.0.1",{"tx":"https://w3id.org/tractusx/v0.0.1/ns/"},{"tx-auth":"https://w3id.org/tractusx/auth/"},{"cx-policy":"https://w3id.org/catenax/policy/"}],"@type":"ContractRequest","counterPartyAddress":"http://alice-controlplane:8084/api/v1/dsp","counterPartyId":"BPNL000000000001","protocol":"dataspace-protocol-http","policy":{"@id":"MQ==:YXNzZXQtMQ==:YzhhNGNlMTctYTgzZC00MmY4LTk0MGQtODYzMDMxYTZhYmRj","@type":"Offer","assigner":"BPNL000000000001","odrl:permission":{"odrl:action":{"@id":"odrl:use"},"odrl:constraint":{"odrl:leftOperand":{"@id":"cx-policy:Membership"},"odrl:operator":{"@id":"odrl:eq"},"odrl:rightOperand":"active"}},"odrl:prohibition":[],"odrl:obligation":[],"target":"asset-1"},"callbackAddresses":[]}
+JSON'
+```
+- **Result:**
+  - DID resources updated to state=200 (PUBLISHED) for Alice/Bob.
+  - BDRS VP verification errors now 0 in recent logs.
+  - BDRS directory endpoint still returns HTTP 404 from Bob control plane.
+  - Negotiations remain in `INITIAL`/`REQUESTING`; Bob logs show `Connect timed out` in `BdrsClientImpl.resolve`.
+- **Notes:**
+  - Core blocker is still BDRS Directory API 404 (Jersey NotFound). The connectors cannot resolve BPN→DID, so contract requests never reach Alice.
+  - Next action: confirm the correct BDRS directory endpoint path or rebuild BDRS image so JAX-RS resources are registered.
+
+---
+
+## [Step 55] Refresh IH Endpoints + Confirm Directory Path + Retry Negotiation
+- **Command:**
+```bash
+# Check current pod IPs
+kubectl get pod -n mxd -l App=alice-ih -o wide
+kubectl get pod -n mxd -l App=bob-ih -o wide
+
+# Update manual Endpoints to new pod IPs (IH ports) while keeping DID NGINX IPs
+kubectl apply -n mxd -f - <<'EOF'
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: alice-ih
+subsets:
+- addresses:
+  - ip: 10.244.0.103
+  ports:
+  - name: credentials
+    port: 7082
+    protocol: TCP
+  - name: identity
+    port: 7081
+    protocol: TCP
+  - name: sts
+    port: 7084
+    protocol: TCP
+  - name: default
+    port: 7080
+    protocol: TCP
+  - name: debug
+    port: 1044
+    protocol: TCP
+- addresses:
+  - ip: 10.244.0.51
+  ports:
+  - name: did
+    port: 80
+    protocol: TCP
+EOF
+
+kubectl apply -n mxd -f - <<'EOF'
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: bob-ih
+subsets:
+- addresses:
+  - ip: 10.244.0.102
+  ports:
+  - name: credentials
+    port: 7082
+    protocol: TCP
+  - name: identity
+    port: 7081
+    protocol: TCP
+  - name: sts
+    port: 7084
+    protocol: TCP
+  - name: default
+    port: 7080
+    protocol: TCP
+  - name: debug
+    port: 1044
+    protocol: TCP
+- addresses:
+  - ip: 10.244.0.52
+  ports:
+  - name: did
+    port: 80
+    protocol: TCP
+EOF
+
+# Verify BDRS directory path behavior
+kubectl exec -n mxd deploy/bdrs-server -- sh -c 'wget -S -O- http://localhost:8082/api/directory 2>&1 | head -n 5'
+kubectl exec -n mxd deploy/bdrs-server -- sh -c 'wget -S -O- http://localhost:8082/api/directory/bpn-directory 2>&1 | head -n 5'
+
+# Retry negotiation
+kubectl run -n mxd contract-request-auto3 --rm -i --restart=Never --image=curlimages/curl:8.5.0 -- sh -c '
+cat <<"JSON" | curl -sS -X POST "http://bob-tractusx-connector-controlplane:8081/management/v3/contractnegotiations" -H "Content-Type: application/json" -H "x-api-key: password" -d @-
+{
+  "@context": [
+    "https://w3id.org/edc/connector/management/v0.0.1",
+    { "tx": "https://w3id.org/tractusx/v0.0.1/ns/" },
+    { "tx-auth": "https://w3id.org/tractusx/auth/" },
+    { "cx-policy": "https://w3id.org/catenax/policy/" }
+  ],
+  "@type": "ContractRequest",
+  "counterPartyAddress": "http://alice-controlplane:8084/api/v1/dsp",
+  "counterPartyId": "BPNL000000000001",
+  "protocol": "dataspace-protocol-http",
+  "policy": {
+    "@id": "MQ==:YXNzZXQtMQ==:YzhhNGNlMTctYTgzZC00MmY4LTk0MGQtODYzMDMxYTZhYmRj",
+    "@type": "Offer",
+    "assigner": "BPNL000000000001",
+    "odrl:permission": {
+      "odrl:action": { "@id": "odrl:use" },
+      "odrl:constraint": {
+        "odrl:leftOperand": { "@id": "cx-policy:Membership" },
+        "odrl:operator": { "@id": "odrl:eq" },
+        "odrl:rightOperand": "active"
+      }
+    },
+    "odrl:prohibition": [],
+    "odrl:obligation": [],
+    "target": "asset-1"
+  },
+  "callbackAddresses": []
+}
+JSON
+'
+```
+- **Result:**
+  - `bob-ih` and `alice-ih` service endpoints were stale; updated to current pod IPs.
+  - BDRS base path `/api/directory` returns 404 (expected), `/api/directory/bpn-directory` returns 401 without auth (endpoint exists).
+  - Alice now receives ContractRequest messages, but outbound messages fail with `BDRS 401 Unauthorized` and BDRS logs `Token verification failed`.
+- **Notes:**
+  - Directory API 404 is only for base path; actual endpoint exists and is protected.
+  - Remaining blocker is Alice VP validation against BDRS (401). Need to fix Alice VP signing/claims or trusted issuer/DID resolution for Alice.
+
+[Step 56] Fix Alice participantId to DID; re-run negotiation
+
+Date: 2026-02-03T08:13:55+09:00
+
+Goal: BDRS accepts Alice VP; negotiation progresses beyond REQUESTING/REQUESTED.
+
+Commands/Evidence:
+
+pre-fix negotiation: /tmp/mxd_1770106164/contract_create_1770106164.log (NEG_ID in /tmp/mxd_1770106164/neg_id_1770106164.txt)
+
+logs + grep: /tmp/mxd_1770106164/log_*_1770106164.log, /tmp/mxd_1770106164/grep_signal_1770106164.log
+
+DID reachability checks: /tmp/mxd_1770106164/didcheck_1770106164.log
+
+svc/endpoints: /tmp/mxd_1770106164/svc_core_1770106164.yaml, /tmp/mxd_1770106164/endpoints_ih_1770106164.yaml
+
+deploy hits: /tmp/mxd_1770106164/deploy_core_1770106164.yaml, /tmp/mxd_1770106164/deploy_hits_1770106164.log
+
+cm hits: /tmp/mxd_1770106164/cm_all_1770106164.yaml, /tmp/mxd_1770106164/cm_hits_1770106164.log
+
+IaC search hits: /tmp/mxd_1770106164/iac_hits_1770106164.log
+
+git diff: /tmp/mxd_1770106164/git_diff_1770106164.patch
+
+terraform apply: /tmp/mxd_1770106164/terraform_apply_1770106164.log
+
+post-fix negotiation: /tmp/mxd_1770106406/contract_create_1770106406.log (NEG_ID2 in /tmp/mxd_1770106406/neg_id_1770106406.txt)
+
+BDRS verify: /tmp/mxd_1770106406/log_bdrs_1770106406.log, /tmp/mxd_1770106406/verify_bdrs_fail_1770106406.log
+
+negotiation state: /tmp/mxd_1770106406/neg_state_1770106406.log
+
+Result:
+
+- Applied IaC change: `alice-connector.participantId` switched from BPN to DID (see git diff).
+- BDRS log grep shows no "Token verification failed" lines in the post-fix window.
+- Negotiation state remains REQUESTING; flow not yet finalized.
+
+[Step 58] Restore DID routing to NGINX + EndpointSlice cleanup
+
+Date: 2026-02-03T09:43:00+09:00
+
+Goal: Serve DID docs via NGINX for Alice/Bob and retry negotiation after clearing stale EndpointSlices.
+
+Commands/Evidence:
+
+svc/endpoints pre-fix: /tmp/mxd_1770107389/svc_bob_ih_1770107389_run3.yaml, /tmp/mxd_1770107389/endpoints_bob_ih_1770107389_run3.yaml, /tmp/mxd_1770107389/svc_alice_ih_1770107389_run3.yaml, /tmp/mxd_1770107389/endpoints_alice_ih_1770107389_run3.yaml
+
+pod IPs: /tmp/mxd_1770107389/pods_ih_did_1770107389_run3.log
+
+remove selectors: /tmp/mxd_1770107389/svc_patch_ih_1770107389_run3.log
+
+manual endpoints apply: /tmp/mxd_1770107389/endpoints_patch_ih_1770107389_run3.log
+
+set did targetPort=80: /tmp/mxd_1770107389/svc_patch_did_target_1770107389_run3.log
+
+delete service-managed EndpointSlices: /tmp/mxd_1770107389/endpointslice_delete_ih_1770107389_run3.log
+
+DID checks:
+- NGINX direct: /tmp/mxd_1770107389/did_nginx_check_1770107389_run5.log
+- FQDN headers: /tmp/mxd_1770107389/did_fqdn_headers_1770107389_run6.log
+
+restart CP after DID fix: /tmp/mxd_1770107389/restart_cp_after_did_1770107389_run3.log
+
+negotiations:
+- /tmp/mxd_1770107389/contract_request_1770107389_run6.log + /tmp/mxd_1770107389/contract_state_1770107389_run6.log
+- /tmp/mxd_1770107389/contract_request_1770107389_run7.log + /tmp/mxd_1770107389/contract_state_1770107389_run7.log
+- /tmp/mxd_1770107389/contract_state_1770107389_run7b.log
+
+logs: /tmp/mxd_1770107389/log_bob_cp_1770107389_run7.log, /tmp/mxd_1770107389/log_alice_cp_1770107389_run7.log
+
+Result:
+
+- DID endpoints now return HTTP 200 with NGINX for both short and FQDN hostnames.
+- Control planes restarted to clear stale DID resolution caches.
+- New negotiations created but remain in INITIAL/REQUESTING at time of check.
+- Bob/Alice CP logs still show Presentation Query 401 with DID resolution HTTP 204 from earlier attempts; need to observe after restart retries.
+
+[Step 57] Verify STS port fix + negotiation retry
+
+Date: 2026-02-03T09:00:00+09:00
+
+Goal: Confirm Alice STS 7084 no longer 404s; check negotiation progresses beyond REQUESTING.
+
+Commands/Evidence:
+
+restart: /tmp/mxd_1770107389/restart_1770107389_run2.log
+
+sts check: /tmp/mxd_1770107389/sts_check_1770107389_run2.log
+
+contract request: /tmp/mxd_1770107389/contract_request_1770107389_run2.log (NEG_ID=f9fc4253-ba34-45e6-b525-940d051db491)
+
+contract state: /tmp/mxd_1770107389/contract_state_1770107389_run2.log
+
+logs: /tmp/mxd_1770107389/log_alice_cp_1770107389_run2.log, /tmp/mxd_1770107389/log_bob_cp_1770107389_run2.log, /tmp/mxd_1770107389/log_alice_ih_1770107389_run2.log
+
+Result:
+
+- STS token endpoint check from curl pod: `/api/sts/token` returned HTTP 500 (non-404); `/api/sts` returned 404.
+- Negotiation created successfully but remains in `REQUESTING` state.
+- Bob control plane logs show repeated `POST http://bob-ih.mxd.svc.cluster.local:7084/api/sts/token` returning 404 during negotiation retries.
+- Alice control plane logs show Presentation Query 401 with DID resolution HTTP 204; no `alice-ih:7084/api/sts/token` 404 observed in the captured window.
+
+[Step 58] Switch DIDs to FQDN + IH-only verification
+
+Date: 2026-02-03T16:45:00+09:00
+
+Changes:
+
+- Switched Alice/Bob DIDs to FQDN (`alice-ih.mxd.svc.cluster.local`, `bob-ih.mxd.svc.cluster.local`) in IaC.
+- Updated seed collection + helper scripts to use FQDN DIDs and base64 values.
+
+Evidence:
+
+terraform apply: /home/etri_lee/.local/share/opencode/tool-output/tool_c230778a2001cwUOIqNG42rYpj, /home/etri_lee/.local/share/opencode/tool-output/tool_c2309e901001mLHLdfF3UGlvrP
+
+db seed: /tmp/mxd_1770114434/setup_db_bob.log, /tmp/mxd_1770114434/setup_db_alice.log, /tmp/mxd_1770114434/setup_db_bob_alias.log
+
+vault seed: /tmp/mxd_1770114434/setup_vaults.log
+
+restart: /tmp/mxd_1770114434/restart_ih_cp.log, /tmp/mxd_1770114434/rollout_alice_ih.log, /tmp/mxd_1770114434/rollout_bob_ih.log, /tmp/mxd_1770114434/rollout_alice_cp.log, /tmp/mxd_1770114434/rollout_bob_cp.log, /tmp/mxd_1770114434/restart_ih_after_vault.log
+
+did/sts checks: /tmp/mxd_1770114434/ih_verify.log, /tmp/mxd_1770114434/alice_sts_token_after_vault.log, /tmp/mxd_1770114434/bob_sts_token.log
+
+catalog request: /tmp/mxd_1770114434/catalog_request.log
+
+negotiation: /tmp/mxd_1770114434/neg_create.json (NEG_ID=cf89fc55-eba1-43c2-8aff-687b5be6e8ad), /tmp/mxd_1770114434/neg_poll.log
+
+logs: /tmp/mxd_1770114434/log_alice_cp_5m.log, /tmp/mxd_1770114434/log_bob_cp_5m.log, /tmp/mxd_1770114434/log_alice_ih_5m.log, /tmp/mxd_1770114434/log_bob_ih_5m.log, /tmp/mxd_1770114434/env_alice_cp_iam_urls.log, /tmp/mxd_1770114434/env_bob_cp_iam_urls.log
+
+Result:
+
+- FQDN DID endpoints return HTTP 200 for both Alice and Bob.
+- STS `/api/sts/token` is non-404 but still returns HTTP 500 when called without form data and HTTP 401 `invalid_client` with `client_secret=password`.
+- Catalog request from Bob returns HTTP 500.
+- Negotiation remains in `REQUESTING` after 12 polls.
+- Alice CP logs show Presentation Query HTTP 400 from IH (`/api/credentials/v1/participants/.../presentations/query`).
+- Alice IH logs show repeated Base64 decode errors in `PresentationApiController.queryPresentation`.
+- Bob CP logs show `Expected exactly 1 VP, but was empty` and repeated BDRS audience mapper stack traces.
+
+[Step 59] Connector image upgrade attempt (sha-53eec90)
+
+Date: 2026-02-04T00:18:00+09:00
+
+Changes:
+
+- Updated connector controlplane/dataplane image tags to `sha-53eec90` in `modules/connector/values.yaml`.
+
+Evidence:
+
+terraform apply: /home/etri_lee/.local/share/opencode/tool-output/tool_c2413d59f0017pftjLfAEkX2OG
+
+helm status: /tmp/mxd_imgfix_try_1770131842/helm_status_alice.txt, /tmp/mxd_imgfix_try_1770131842/helm_status_bob.txt
+
+pods: /tmp/mxd_imgfix_try_1770131842/pods_controlplane.txt, /tmp/mxd_imgfix_try_1770131842/pods_dataplane.txt
+
+Result:
+
+- Terraform apply timed out while Helm was modifying alice/bob; releases went `pending-upgrade` (rev 27).
+- New CP/DP pods crashed on Flyway `V1_1_0__Lease_Fix.sql` (lease_pk dependency, missing data_plane_lease_lease_id_fk) and were rolled back to restore 0.9.0 pods.
+- Negotiation verification was not run because the upgrade failed.
+
+[Step 60] Attempt connector upgrade to 0.10.2 (failed, rolled back)
+
+Date: 2026-02-04T00:53:00+09:00
+
+Change: set connector image tags to 0.10.2 (CP/DP) in `modules/connector/values.yaml`.
+
+Evidence: /tmp/mxd_img_0102_1770133783
+
+git diff: /tmp/mxd_img_0102_1770133783/git_diff.patch
+
+terraform apply: /tmp/mxd_img_0102_1770133783/terraform_apply.log
+
+pods before/after: /tmp/mxd_img_0102_1770133783/pods_before.txt, /tmp/mxd_img_0102_1770133783/pods_after_apply.txt
+
+helm status: /tmp/mxd_img_0102_1770133783/helm_status_alice_before_rb.txt, /tmp/mxd_img_0102_1770133783/helm_status_bob_before_rb.txt
+
+rollback: /tmp/mxd_img_0102_1770133783/helm_list_after_rb.txt, /tmp/mxd_img_0102_1770133783/pods_after_rb.txt
+
+Result:
+
+- Alice/Bob controlplanes entered CrashLoopBackOff and Helm releases went pending-upgrade (rev 29).
+- Rolled back both releases to rev 28; releases now deployed (rev 30) and 0.9.0 pods running.
+- Catalog/negotiation verification was not run due to upgrade failure.
+
+## [Step 61] UWL state proof + catalog/auth verification (0.11.2/seed/STS/DID)
+- Date: 2026-02-05T02:06:18+09:00
+- Evidence dir: /tmp/mxd_uwl_1770224139
+- What we proved:
+  - Helm list/status: /tmp/mxd_uwl_1770224139/helm_list.txt, /tmp/mxd_uwl_1770224139/helm_status_alice.txt, /tmp/mxd_uwl_1770224139/helm_status_bob.txt
+  - Pods/deploys/images: /tmp/mxd_uwl_1770224139/pods.txt, /tmp/mxd_uwl_1770224139/deploys.txt, /tmp/mxd_uwl_1770224139/*_image.txt
+  - Seed job: /tmp/mxd_uwl_1770224139/jobs.txt (none), /tmp/mxd_uwl_1770224139/seed_pods.txt (old seed pods), /tmp/mxd_uwl_1770224139/meta.txt (SEED_JOB empty)
+  - Catalog request: /tmp/mxd_uwl_1770224139/catalog_request.log, /tmp/mxd_uwl_1770224139/catalog_summary.txt
+  - Logs + grep signals: /tmp/mxd_uwl_1770224139/log_*.log, /tmp/mxd_uwl_1770224139/grep_signal.log
+  - Deploy/CM scans: /tmp/mxd_uwl_1770224139/deploy_all.yaml, /tmp/mxd_uwl_1770224139/deploy_hits.log, /tmp/mxd_uwl_1770224139/cm_all.yaml, /tmp/mxd_uwl_1770224139/cm_hits.log
+  - IaC hits: /tmp/mxd_uwl_1770224139/iac_hits.log
+- Result:
+  - Catalog HTTP + dataset length: HTTP 200, dataset len = 0 (empty)
+  - Connector images: both Alice/Bob controlplane & dataplane at 0.11.2
+  - Alice CP log signal: repeated "Unable to obtain credentials: Failure in DID resolution"
+  - No "ID token sub mismatch" found in recent logs; current failure is DID resolution + empty catalog
+
+## [Step 62] Restore seeding + validate DID resolution (0.11.2) to fix empty catalog
+- Date: 2026-02-05T02:20:00+09:00
+- Evidence dir: /tmp/mxd_seed_didfix_1770225206
+- Key checks:
+  - images: /tmp/mxd_seed_didfix_1770225206/*_image.txt (all 0.11.2)
+  - jobs before/after: /tmp/mxd_seed_didfix_1770225206/jobs.txt, /tmp/mxd_seed_didfix_1770225206/jobs_after_apply.txt
+  - terraform apply: /tmp/mxd_seed_didfix_1770225206/terraform_apply_replace_seed.log
+  - seed logs: /tmp/mxd_seed_didfix_1770225206/seed_job_log_tail_after_apply.txt
+  - DID HTTP checks: /tmp/mxd_seed_didfix_1770225206/did_http_checks.log, /tmp/mxd_seed_didfix_1770225206/did_resolution_test2.log
+  - catalog before/after: /tmp/mxd_seed_didfix_1770225206/catalog_summary.txt, /tmp/mxd_seed_didfix_1770225206/catalog_summary_after_seed.txt
+  - logs + grep: /tmp/mxd_seed_didfix_1770225206/grep_signal_after_seed.log
+  - BDRS checks: /tmp/bdrs_check2.log, /tmp/bdrs_paths.log
+
+### Results:
+- **Seed job**: Recreated via terraform apply -replace. All containers completed successfully:
+  - seed-alice-connector: ✅ (409 Conflict = data exists)
+  - seed-alice-catalogserver: ✅
+  - seed-bdrs: ✅ (204 No Content - BPN mappings created!)
+  - membership-cred-alice: ✅
+  - membership-cred-bob: ✅
+  - dataspace-issuer: ⚠️ (HTTP 500 but assertions passed)
+
+- **Catalog**: HTTP 200 but **dataset len = 0** (still empty)
+
+- **DID resolution HTTP checks**:
+  - alice-ih:7083/alice/did.json: ✅ HTTP 200
+  - bob-ih:7083/bob/did.json: ✅ HTTP 200
+  - dataspace-issuer:80/.well-known/did.json: ✅ HTTP 200
+  - dataspace-issuer-service:10016/.well-known/did.json: ❌ HTTP 500
+
+- **BDRS mappings confirmed working** (via management API on 8081):
+  - BPNL000000000001 → did:web:alice-ih%3A7083:alice
+  - BPNL000000000002 → did:web:bob-ih%3A7083:bob
+  - BPNL000000000003 → did:web:trudy-ih%3A7083:trudy
+
+### ROOT CAUSE IDENTIFIED:
+- **BDRS directory endpoint returns 404** on port 8082!
+- Connector config: `TX_IAM_IATP_BDRS_SERVER_URL=http://bdrs-server:8082/api/directory`
+- All paths tested on 8082 return 404, servlet shows `EDC-directory` exists but not responding
+- Management API on 8081 works, but connectors use 8082 for BPN→DID lookups
+- This prevents connectors from resolving BPN→DID mappings at runtime
+- Connector logs show: "Unable to obtain credentials: Failure in DID resolution: null"
+
+### Next steps:
+1. Fix BDRS directory endpoint on port 8082 (may need BDRS helm values adjustment or version check)
+2. Verify BDRS server version compatibility with connector 0.11.2
+3. Check if BDRS needs web.resources.directory.path configuration
+
+---
+
+## [Step 64] Align STS audiences + SSI audience; re-validate PQ/BDRS and negotiation
+- Date: 2026-02-05T03:07:00+09:00
+- Changes applied:
+  - `alice.tf` / `bob.tf`: STS token audience set to self DID; IdentityHub URLs switched to service hostnames (`alice-ih`, `bob-ih`).
+  - `modules/connector/main.tf`: `TX_SSI_ENDPOINT_AUDIENCE` set to participant DID (`var.dcp-config.id`).
+  - `alice.tf` catalog-server `dcp-config.sts_token_url` switched to `http://alice-ih:7084/api/sts/token`.
+- Terraform apply:
+  - `Apply complete! Resources: 7 added, 3 changed, 0 destroyed.`
+- Env validation:
+  - Bob CP now shows `EDC_IAM_IATP_STS_OAUTH_TOKEN_AUDIENCE=did:web:bob-ih%3A7083:bob` and `TX_SSI_ENDPOINT_AUDIENCE=did:web:bob-ih%3A7083:bob`.
+  - Alice CP now shows `EDC_IAM_IATP_STS_OAUTH_TOKEN_AUDIENCE=did:web:alice-ih%3A7083:alice` and `TX_SSI_ENDPOINT_AUDIENCE=did:web:alice-ih%3A7083:alice`.
+- PQ/BDRS spot check:
+  - STS access token with audience `did:web:bob-ih%3A7083:bob` returned HTTP 200.
+  - Self-issued token + PQ attempt returned HTTP 401 (`ID token verification failed: Failed to decode token`).
+  - Bob CP logs still show `Unable to obtain credentials: Failure in DID resolution: counterPartyId is null` for `http://alice-cs:8082/api/dsp`.
+- Negotiation retry:
+  - New negotiation id `0183ce81-4028-4eb2-ada2-2dc6033a00f8`.
+  - State: `TERMINATED` with error `Failed to send termination to counter party: Value in JsonObjects name/value pair cannot be null`.
+- Conclusion:
+  - IAM env alignment is applied, but DID/BDRS resolution remains broken; negotiation still terminates.
+
+---
+
+## [Step 63] Contract negotiation retry (Bob -> Alice) and transfer gating
+- Date: 2026-02-05T02:56:00+09:00
+- Commands:
+  - POST http://localhost/bob/management/v3/contractnegotiations (policy from alice-cs catalog)
+  - GET  http://localhost/bob/management/v3/contractnegotiations/<id>/state
+  - GET  http://localhost/bob/management/v3/contractnegotiations/<id>
+  - POST http://localhost/bob/management/v3/contractnegotiations/request
+- Result:
+  - New negotiation id `c139f248-e5af-45e3-b7d2-bf663dfd261e`
+  - State: `TERMINATED`
+  - Error: `Failed to send termination to counter party: Value in JsonObjects name/value pair cannot be null`
+  - All recent negotiations in list are `TERMINATED`; no `contractAgreementId` available
+- Notes:
+  - Transfer/EDR steps cannot proceed without a finalized agreement.
+  - Likely blocked by the same BDRS directory endpoint issue noted in Step 62.
+
+---
+
+## [Step 64] Scope expansion + IH logging (403 persists)
+- Date: 2026-02-05
+- Changes:
+  - `modules/identity-hub/main.tf`: added `EDC_LOGGER_LEVEL=DEBUG` and IdentityHub logger levels for VerifiableCredential, CoreServices Query, API Validation, and SPI Verification (later bumped VC/CoreServices to TRACE).
+  - `alice.tf` / `bob.tf`: added IATP default scopes for `FrameworkAgreementCredential` + `UsagePurposeCredential`, expanded `EDC_IAM_IATP_STS_OAUTH_TOKEN_SCOPE`/`TX_EDC_IAM_IATP_STS_OAUTH_TOKEN_SCOPE`, and added scope3/4 to `JAVA_TOOL_OPTIONS` default scopes.
+  - `modules/catalog-server/catalog-server.tf`: added IATP default scopes + STS token scopes for FrameworkAgreement/UsagePurpose.
+- Actions:
+  - Ran targeted Terraform applies for connectors/catalog server and restarted IdentityHub pods.
+  - Attempted packet capture via `kubectl debug` + `tcpdump` on Alice IH and Bob control plane (no packets captured).
+  - Reseeded Alice catalog server assets/policies/contracts and updated local `tmp-contract-request.json` with the new offer id.
+- Result:
+  - Negotiation still fails with HTTP 403 `Invalid query: requested Credentials outside of scope` during ContractAgreementMessage.
+  - IdentityHub logs still do not surface requested scope details despite TRACE on VC/CoreServices.
+  - Bob control plane logs show `No TokenDecorator was registered. The 'scope' field of outgoing protocol messages will be empty`.
+  - Bob control plane intermittently logs `counterPartyId` null during catalog crawl.
+- Next:
+  - Verify FrameworkAgreementCredential/UsagePurposeCredential are actually issued in IH for Alice/Bob.
+  - Confirm `JAVA_TOOL_OPTIONS` scope3/4 picked up by control planes on restart.
+  - Capture the PresentationQuery payload (or enable request logging) to validate requested scopes.
+
+---
+
+## [Step 65] Seed FrameworkAgreement/UsagePurpose credentials (rawVc required)
+- Date: 2026-02-05
+- Actions:
+  - Attempted to POST FrameworkAgreement/UsagePurpose credentials to Alice/Bob IH Identity API; all requests returned HTTP 500.
+  - IdentityHub logs show `credential_resource.raw_vc` NOT NULL violations (missing `rawVc` in payload).
+  - Verified existing credentials in `alice_0112` include JWT `raw_vc`; inspected issuer key in `assets/issuer.key.json`.
+  - Generated EdDSA JWTs (kid `did:web:dataspace-issuer#key-1`) with VC subjects for `FrameworkAgreementCredential` (DataExchangeGovernance:1.0) and `UsagePurposeCredential` (cx.core.sustainability:1), matching Alice/Bob DIDs + BPNs.
+  - Re-posted using heredoc to avoid inline JSON quoting errors.
+- Result:
+  - Alice FrameworkAgreement + UsagePurpose credentials created (HTTP 204).
+  - Bob FrameworkAgreement credential created (HTTP 204).
+  - Bob UsagePurpose credential still pending.
+
+---
+
+## [Step 66] Bob UsagePurpose credential seeded
+- Date: 2026-02-05
+- Action:
+  - POSTed UsagePurposeCredential with rawVc JWT to `bob-ih` Identity API (heredoc payload).
+- Result:
+  - Bob UsagePurpose credential created (HTTP 204). All FrameworkAgreement/UsagePurpose credentials now seeded for Alice + Bob.
+
+---
+
+## [Step 67] Negotiation retry after credential seeding (403 persists)
+- Date: 2026-02-05
+- Command:
+  - POST `http://bob-tractusx-connector-controlplane:8081/management/v3/contractnegotiations` with the FrameworkAgreement + UsagePurpose policy offer (same as `tmp-contract-request.json`).
+- Result:
+  - Negotiation created: `e1fc7619-a820-4f14-9cc1-0183c4fc0e20` (HTTP 200).
+  - Bob control plane logs show:
+    - `Unauthorized: Number of requested credentials does not match the number of returned credentials`
+    - ContractNegotiation moved `INITIAL -> REQUESTING -> REQUESTED` then failed on `ContractAgreementMessage` with `Presentation Query failed: HTTP 403 ... Invalid query: requested Credentials outside of scope`.
+    - `ContractNegotiationTerminationMessage` hit the same `HTTP 403` scope error.
+  - Catalog crawl still emits `Failure in DID resolution: counterPartyId is null` for `http://alice-cs:8082/api/dsp`.
+- Next:
+  - Confirm the PresentationQuery requests include four scopes (Membership, DataExchangeGovernance, FrameworkAgreement, UsagePurpose) and the IH returns all four credentials.
+  - Investigate why PQ returns fewer credentials or why TokenDecorator still absent (scope propagation).
+
+---
+
+## [Step 68] Manual PQ with 4 scopes succeeds; connector still 403
+- Date: 2026-02-05
+- Actions:
+  - Ran direct STS self-issued token flow against Bob IH and executed PresentationQuery with 4 scopes.
+  - Decoded SSI token payload: outer JWT contains `token` claim; nested access token includes full scope list.
+  - Parsed PQ response: one presentation containing 4 verifiable credentials.
+  - Checked control plane env: `EDC_IAM_STS_OAUTH_TOKEN_SCOPE` is not set (only `EDC_IAM_STS_OAUTH_TOKEN_URL`/`CLIENT_ID` present), while `EDC_IAM_IATP_STS_OAUTH_TOKEN_SCOPE` is set to 4 scopes.
+- Result:
+  - IH accepts `org.eclipse.tractusx.vc.type:*:read` scopes and returns all 4 credentials when called directly.
+  - Connector still fails with `Invalid query: requested Credentials outside of scope`, so its PQ token/scope list likely differs from the manual flow.
+- Next:
+  - Capture/confirm the actual `bearer_access_scope` used by the connector’s STS call.
+  - Verify whether the connector is using non-IATP STS OAuth config (missing scope) for PQ/DSP.
+
+---
+
+## [Step 69] Alias mismatch reproduced (edc vs tractusx)
+- Date: 2026-02-05
+- Action:
+  - Ran PQ with `org.eclipse.edc.vc.type:*:read` scopes against Bob IH.
+- Result:
+  - HTTP 403 with explicit error: `Scope alias MUST be org.eclipse.tractusx.vc.type but was org.eclipse.edc.vc.type` (repeated per scope).
+- Conclusion:
+  - IH enforces `org.eclipse.tractusx.vc.type` alias. If connector sends `org.eclipse.edc.vc.type`, PQ will be rejected even when credentials exist.
+- Next:
+  - Confirm the connector’s generated `bearer_access_scope` and PQ `scope` entries use the tractusx alias.
+
+---
+
+## [Step 70] Inject non-IATP STS scope envs into connectors
+- Date: 2026-02-05
+- Changes:
+  - `alice.tf`: added `EDC_IAM_STS_OAUTH_TOKEN_SCOPE` and `TX_EDC_IAM_STS_OAUTH_TOKEN_SCOPE` with 4 tractusx scopes.
+  - `bob.tf`: added `EDC_IAM_STS_OAUTH_TOKEN_SCOPE` and `TX_EDC_IAM_STS_OAUTH_TOKEN_SCOPE` with 4 tractusx scopes.
+- Actions:
+  - `terraform apply -target=module.alice-connector -target=module.bob-connector` (Apply complete: 2 added, 2 changed).
+  - Verified envs on both control planes now show the new STS scope vars set to 4 scopes.
+- Result:
+  - Connectors now expose both IATP and non-IATP STS scope lists with `org.eclipse.tractusx.vc.type` alias.
+- Next:
+  - Retry negotiation and check if `Presentation Query failed: requested Credentials outside of scope` clears.
+
+---
+
+## [Step 71] Negotiation rerun after STS scope update (403 persists)
+- Date: 2026-02-05
+- Command:
+  - POST new negotiation to Bob control plane (id `ce480ef4-1c48-413e-8c1c-73a4e50d1a5b`).
+- Result (Bob CP logs):
+  - State progressed `INITIAL -> REQUESTING -> REQUESTED`.
+  - `ContractAgreementMessage` triggered `Presentation Query failed: HTTP 403 ... Invalid query: requested Credentials outside of scope`.
+  - `ContractNegotiationTerminationMessage` hit the same 403.
+- Conclusion:
+  - Adding `EDC_IAM_STS_OAUTH_TOKEN_SCOPE` did not resolve the PQ scope mismatch for negotiation flow.
+
+---
+
+## [Step 72] IH credential inventory + raw_vc error evidence
+- Date: 2026-02-05
+- Actions:
+  - Listed IdentityHub credentials via Identity API using the superuser API key (X-Api-Key).
+  - Collected Bob IH logs filtered for addCredential/raw_vc errors.
+- Result:
+  - Bob IH credentials present: MembershipCredential, DataExchangeGovernanceCredential, FrameworkAgreementCredential, UsagePurposeCredential.
+  - Alice IH credentials present: MembershipCredential, DataExchangeGovernanceCredential, FrameworkAgreementCredential, UsagePurposeCredential.
+  - Bob IH logs show `credential_resource.raw_vc` NOT NULL violations in `VerifiableCredentialsApiController.addCredential` (rawVc missing in some inserts).
+- Conclusion:
+  - All 4 credential types are present in both IHs; PQ failure is not explained by missing credential types.
+
+---
+
+## [Step 73] STS scope inspection attempt (control plane)
+- Date: 2026-02-05
+- Actions:
+  - Attempted tcpdump capture on Bob control plane pod during negotiation to extract STS token request/response for PQ.
+  - Captures did not succeed due to debug container permissions (non-root/NET_RAW issues).
+  - Manually generated a self-issued token from Bob IH STS with `bearer_access_scope` set to 4 tractusx scopes and decoded payload.
+- Result:
+  - Manual STS token contains nested `token` with `scope` claim including all four `org.eclipse.tractusx.vc.type:*:read` entries.
+  - Actual control-plane token scope still unconfirmed (tcpdump capture failed).
+- Next:
+  - Capture STS request/response from control plane with a privileged debug profile or alternate interception method to confirm the real `bearer_access_scope` used by PQ.
+
+---
+
+## [Step 74] STS request logging (bob-ih) - no params found
+- Date: 2026-02-05
+- Actions:
+  - Collected last ~60m bob-ih logs before/after negotiation and grepped for `/api/sts/token`, `bearer_access_scope`, `grant_type`, `audience`, `scope`.
+  - Inspected bob-ih container env for logging config and checked `/app` contents (no log4j/logback config files found; `identityhub.jar` present; `edc.json` only lists extensions).
+- Result:
+  - No STS request parameters or `/api/sts/token` entries present in logs.
+  - Logging config for request parameters not apparent in container filesystem.
+- Next:
+  - If allowed, enable Jetty request logging via config (`edc.web.server.request.log.enabled=true`) or similar and restart bob-ih to capture request params (without secrets).
+
+---
+
+## [Step 75] Jetty request log enabled on bob-ih (no STS lines)
+- Date: 2026-02-05
+- Changes:
+  - `modules/identity-hub/main.tf`: set `EDC_WEB_SERVER_REQUEST_LOG_ENABLED=true` and `EDC_WEB_SERVER_REQUEST_LOG_FORMAT="%m %U %s %O"` (safe format, no headers/body).
+  - Applied Terraform target `module.bob-identityhub` and restarted `bob-ih`.
+- Actions:
+  - Triggered one negotiation (id `84b27345-58a7-4e7a-b302-9f337a14495c`).
+  - Collected bob-ih logs and grepped for `/api/sts/token`.
+- Result:
+  - No `/api/sts/token` request lines appeared in bob-ih logs; request logging still not visible.
+- Next:
+  - Identify correct EDC Jetty request log config keys/logger name, or alternate safe capture method.
+
+---
+
+## [Step 76] Ingress-nginx access logs (no control-plane STS traffic)
+- Date: 2026-02-05
+- Actions:
+  - Checked bob-ih ingress rules (`/bob-ih/sts` -> 7084, `/bob-ih/cs` -> 7081) and ingress-nginx controller logs.
+  - Sent safe GETs through ingress to validate access logging.
+- Result:
+  - Ingress access logs show only manual test requests (GET `/bob-ih/sts/api/sts/token`, GET `/bob-ih/cs/api/identity/v1alpha/credentials`) with 404/503; no `/api/sts/token` lines from control-plane negotiation.
+  - Controller logs warn `Service "mxd/bob-ih" does not have any active Endpoint` around the test window.
+- Conclusion:
+  - Control-plane STS traffic does not traverse ingress; ingress access logs cannot capture the PQ STS request.

@@ -1,0 +1,223 @@
+MXD / Tractus-X EDC Report+PPT Reference Map (local source mining)
+Generated: 2026-02-04
+Repo: /home/etri_lee/tutorial-resources/mxd
+
+1. Architecture overview (IH/STS/EDC/BDRS/DSP, ports, flows) - Top 5
+1.a /home/etri_lee/tutorial-resources/mxd/README.md
+Why/Extract: High-level MXD architecture + local (KinD) access model; lift the "what runs" + "how you reach it" narrative.
+Keywords to grep: Minimum Tractus-X Dataspace, terraform, KinD, ingress, port-forward, management/v3, IdentityHub, BDRS
+
+1.b /home/etri_lee/tutorial-resources/mxd/modules/connector/main.tf
+Why/Extract: Source-of-truth wiring from Terraform -> Helm values/env for the connector (DSP callback, BDRS URL, STS token URL, participants list mount).
+Keywords to grep: EDC_DSP_CALLBACK_ADDRESS, bdrs, api/directory, token_url, sts, participants.json, helm_release
+
+1.c /home/etri_lee/tutorial-resources/mxd/modules/identity-hub/main.tf
+Why/Extract: IdentityHub runtime contract (ports/paths + Vault/DB env); cite for STS + DID + Credentials APIs.
+Keywords to grep: WEB_HTTP_, WEB_HTTP_STS_, WEB_HTTP_DID_, credentials-api, EDC_VAULT_HASHICORP_, EDC_DATASOURCE_
+
+1.d /home/etri_lee/tutorial-resources/mxd/bdrs.tf
+Why/Extract: BDRS service role + ports (8081 mgmt, 8082 directory) + base URLs; cite for "why outbound DSP needs BDRS".
+Keywords to grep: bdrs-mgmt-url, bdrs-directory-url, 8081, 8082, trustedIssuers, JAVA_TOOL_OPTIONS
+
+1.e /home/etri_lee/tutorial-resources/mxd/assets/participants.json
+Why/Extract: The catalog crawler's "who to crawl" list; great for explaining why a crawl hits a specific DSP URL and why BPN vs DID matters.
+Keywords to grep: "id", "url", api/v1/dsp, alice-cs, bob-controlplane
+
+
+2. IaC (Terraform modules, Helm values, variables) - Top 5
+2.a /home/etri_lee/tutorial-resources/mxd/main.tf
+Why/Extract: Root Terraform entrypoint + shared resources; cite as "single command deploy" foundation.
+Keywords to grep: required_providers, kubernetes_namespace, module
+
+2.b /home/etri_lee/tutorial-resources/mxd/alice.tf
+Why/Extract: Alice full stack (connector + IH + catalog server) and the most important env overrides (IATP/PQ/STS); cite as "where the bugs were introduced/fixed".
+Keywords to grep: controlplane_env, EDC_IAM_IATP_, PRESENTATION_QUERY_URL, STS_OAUTH_TOKEN_URL, bdrs, sts_token_url
+
+2.c /home/etri_lee/tutorial-resources/mxd/bob.tf
+Why/Extract: Bob consumer side wiring; use as the baseline for "expected correct" STS/PQ configuration.
+Keywords to grep: EDC_IAM_IATP_, STS_OAUTH_, PRESENTATION_QUERY_URL, CREDENTIALSERVICE_URL
+
+2.d /home/etri_lee/tutorial-resources/mxd/postgres-init.tf
+Why/Extract: Central DB provisioning (including BDRS DB); cite in Flyway/init and credential-store debugging.
+Keywords to grep: module.postgres, bdrs, init
+
+2.e /home/etri_lee/tutorial-resources/mxd/modules/connector/values.yaml
+Why/Extract: Image repositories/tags and logging knobs; cite exact runtime versions.
+Keywords to grep: repository, tag, log, probe, controlplane, dataplane
+
+
+3. Runtime configs (env keys, JAVA_TOOL_OPTIONS, logging) - Top 5
+3.a /home/etri_lee/tutorial-resources/mxd/alice.tf
+Why/Extract: Concrete env map powering Alice connector behavior (BDRS URL, default scopes, PQ URL, STS token URL, audience); cite for "why 401/502 happened".
+Keywords to grep: TX_EDC_IAM_IATP_BDRS_SERVER_URL, DEFAULT_SCOPES, PRESENTATION_QUERY_URL, STS_OAUTH_, TOKEN_AUDIENCE, TOKEN_SCOPE
+
+3.b /home/etri_lee/tutorial-resources/mxd/bob.tf
+Why/Extract: Same as Alice, but used for diffing and "known good"; cite in debugging method ("compare env parity").
+Keywords to grep: EDC_IAM_IATP_, TX_EDC_IAM_IATP_, STS_OAUTH_, PRESENTATION_QUERY_URL
+
+3.c /home/etri_lee/tutorial-resources/mxd/modules/catalog-server/catalog-server.tf
+Why/Extract: Catalog-server STS env injection (EDC + TX variants) and participants list mount; cite for "second place the STS URL must match".
+Keywords to grep: EDC_IAM_STS_OAUTH_, TX_EDC_IAM_IATP_STS_OAUTH_, participants.json, targetsFile
+
+3.d /home/etri_lee/tutorial-resources/mxd/modules/identity-hub/variables.tf
+Why/Extract: Canonical port map for IdentityHub (7081 identity, 7082 credentials, 7083 did, 7084 sts); cite as the "port truth".
+Keywords to grep: ih-identity-api, credentials-api, ih-did, sts-api
+
+3.e /home/etri_lee/tutorial-resources/mxd/bdrs.tf
+Why/Extract: BDRS runtime env keys and logging/debug options; cite when explaining "Token verification failed" loops.
+Keywords to grep: EDC_, JAVA_TOOL_OPTIONS, trustedIssuers, EDC_IAM_DID_WEB_USE_HTTPS
+
+
+4. Test tooling (curl scripts, Postman collections, seed jobs) - Top 5
+4.a /home/etri_lee/tutorial-resources/mxd/seed_data.tf
+Why/Extract: Deterministic seeding via K8s job + Newman; cite as "repeatable dataset + config baseline".
+Keywords to grep: kubernetes_job, newman, SeedBDRS, SeedIH, --env-var, MANAGEMENT_URL, IH_URL
+
+4.b /home/etri_lee/tutorial-resources/mxd/port-forward.sh
+Why/Extract: Local debugging bridge (8282/8283 connectors, 8285 BDRS, 7081/7082/7091/7092 IH, 10013 issuer admin); cite as your daily workflow.
+Keywords to grep: kubectl port-forward, 8282, 8283, 8285, 7081, 7082, 7091, 7092, 10013
+
+4.c /home/etri_lee/tutorial-resources/mxd/MXD Service APIs.postman_collection.json
+Why/Extract: "Example Sequence" style verification for catalog/negotiation/transfer; cite request payloads + expected statuses.
+Keywords to grep: catalog/request, contractnegotiations, transferprocesses, edrs, counterPartyAddress, counterPartyId
+
+4.d /home/etri_lee/tutorial-resources/mxd/MXD Management API Seed.postman_collection.json
+Why/Extract: Seeding participants/creds/BDRS mappings; cite the exact points where wrong DIDs / wrong endpoints broke the system.
+Keywords to grep: SeedBDRS, BPN, did:web:, participants, credentials, presentations/query
+
+4.e /home/etri_lee/tutorial-resources/mxd/postman/management_api_tests.json
+Why/Extract: Automated-ish state polling patterns (/state) and EDR access; cite as your "verification harness".
+Keywords to grep: /v3/catalog/request, /v3/contractnegotiations, /state, /v3/transferprocesses, /v3/edrs
+
+
+5. Debugging evidence (debug_progress.md + /tmp evidence dirs) - Top 5
+5.a /home/etri_lee/tutorial-resources/mxd/debug_progress.md
+Why/Extract: Your full timeline; extract 5-8 "turning points" with symptom -> command -> evidence -> conclusion.
+Keywords to grep: HTTP 204, did.json, presentations/query, Required claim, invalid_client, Empty optional, Token verification failed, BDRS 404, REQUESTED
+
+5.b /home/etri_lee/tutorial-resources/mxd/POSTMAN_FIXES_SUMMARY.md
+Why/Extract: Clean root-cause writeup (wrong BDRS DID seed + DSP URL inconsistencies + wrong IH endpoint); cite as "postmortem".
+Keywords to grep: ROOT CAUSE, WRONG DID, alice-controlplane, /api/v1/dsp, IdentityHub credentials API
+
+5.c /home/etri_lee/tutorial-resources/mxd/APPLY_FIXES.md
+Why/Extract: Reproducible application + verification steps; cite for "how I validated the fix".
+Keywords to grep: newman, SeedBDRS, rollout restart, Verify, catalog request
+
+5.d /home/etri_lee/tutorial-resources/mxd/port-forward.log
+Why/Extract: Captured infra flake (port-forward sandbox not found); cite as "debugging friction" evidence.
+Keywords to grep: Unhandled Error, lost connection to pod, failed to find sandbox
+
+5.e Evidence packs you already saved under /tmp (cite as appendices; list filenames, don't paste huge logs)
+Why/Extract: These are your screenshots/log bundles; for each, extract "what this proves" + 3-5 key filenames.
+- /tmp/mxd_1770106164/
+- /tmp/mxd_1770106406/
+- /tmp/mxd_1770107389/
+- /tmp/mxd_1770114434/
+- /tmp/mxd_fix2_1770126721/
+- /tmp/mxd_imgfix_try_1770131842/
+- /tmp/mxd_img_0102_1770133783/
+Keywords to grep inside those dirs: did.json, sts/token, presentations/query, invalid_client, Empty optional, Token verification failed, Flyway
+
+
+6. Final verification (catalog/negotiation/transfer commands + expected outputs) - Top 5
+6.a /home/etri_lee/tutorial-resources/mxd/MXD Service APIs.postman_collection.json
+Why/Extract: The cleanest "demo run" script: catalog -> negotiation -> transfer; cite request bodies and expected status transitions.
+Keywords to grep: CatalogRequest, counterPartyAddress, counterPartyId, FINALIZED, COMPLETED
+
+6.b /home/etri_lee/tutorial-resources/mxd/postman/mxd-management-apis.json
+Why/Extract: Raw endpoint list for management API v3 (contractnegotiations, transferprocesses, edrs); cite for "what I call and why".
+Keywords to grep: /v3/catalog/request, /v3/contractnegotiations, /v3/transferprocesses, /v3/edrs, /dataaddress
+
+6.c /home/etri_lee/tutorial-resources/mxd/postman/management_api_tests.json
+Why/Extract: Polling logic (/state) and EDR refresh patterns; cite as "expected outputs / assertions".
+Keywords to grep: /state, NEGOTIATION_ID, TRANSFER_ID, edrs, dataaddress
+
+6.d /home/etri_lee/tutorial-resources/mxd/docs/EDR Transfer Tutorial.md
+Why/Extract: Human-readable EDR story + API usage; cite for PPT diagrams of the EDR step.
+Keywords to grep: EDR, EndpointDataReference, edc:endpoint, management, dataaddress
+
+6.e /home/etri_lee/tutorial-resources/mxd/seed_data.tf
+Why/Extract: Proof that verification is meaningful (assets/policies/participants seeded consistently).
+Keywords to grep: asset, policy, contract, Seed, newman
+
+
+Sensitive materials to cite only as "present but redacted" (do not paste contents)
+- /home/etri_lee/tutorial-resources/mxd/assets/issuer.key.json (private key; redact)
+- /home/etri_lee/tutorial-resources/mxd/my-config.yaml (contains credentials/tokens; redact values like [REDACTED])
+- /home/etri_lee/tutorial-resources/mxd/terraform.tfstate* (can embed secrets; cite carefully or avoid)
+
+
+C) Report + PPT outline mapped to sources
+
+Report (1-8)
+1) Lab + goal (KinD, namespace mxd, what you built)
+- Sources: /home/etri_lee/tutorial-resources/mxd/README.md, /home/etri_lee/tutorial-resources/mxd/kind.config.yaml, /home/etri_lee/tutorial-resources/mxd/main.tf
+
+2) Architecture overview (components + responsibilities)
+- Sources: /home/etri_lee/tutorial-resources/mxd/README.md, /home/etri_lee/tutorial-resources/mxd/alice.tf, /home/etri_lee/tutorial-resources/mxd/bob.tf, /home/etri_lee/tutorial-resources/mxd/bdrs.tf
+
+3) Network + ports + endpoints (what runs where)
+- Sources: /home/etri_lee/tutorial-resources/mxd/modules/identity-hub/variables.tf, /home/etri_lee/tutorial-resources/mxd/modules/connector/service.tf, /home/etri_lee/tutorial-resources/mxd/port-forward.sh, /home/etri_lee/tutorial-resources/mxd/modules/catalog-server/services.tf
+
+4) IaC wiring (Terraform -> Helm -> env) and runtime versions
+- Sources: /home/etri_lee/tutorial-resources/mxd/modules/connector/main.tf, /home/etri_lee/tutorial-resources/mxd/modules/connector/values.yaml, /home/etri_lee/tutorial-resources/mxd/modules/catalog-server/catalog-server.tf, /home/etri_lee/tutorial-resources/mxd/postgres-init.tf
+
+5) Identity plane deep dive (IdentityHub: Identity API, Credentials API, DID serving, STS)
+- Sources: /home/etri_lee/tutorial-resources/mxd/modules/identity-hub/main.tf, /home/etri_lee/tutorial-resources/mxd/modules/identity-hub/ingress.tf, /home/etri_lee/tutorial-resources/mxd/docs/CredentialIssuance.md, /home/etri_lee/tutorial-resources/mxd/MXD Management API Seed.postman_collection.json
+
+6) Operational workflow (seeding + local access)
+- Sources: /home/etri_lee/tutorial-resources/mxd/seed_data.tf, /home/etri_lee/tutorial-resources/mxd/MXD Management API Seed.postman_collection.json, /home/etri_lee/tutorial-resources/mxd/port-forward.sh, /home/etri_lee/tutorial-resources/mxd/port-forward.log
+
+7) Debugging journey (turning points + evidence)
+- Sources: /home/etri_lee/tutorial-resources/mxd/debug_progress.md, /home/etri_lee/tutorial-resources/mxd/POSTMAN_FIXES_SUMMARY.md, /home/etri_lee/tutorial-resources/mxd/APPLY_FIXES.md, /tmp/mxd_1770107389/, /tmp/mxd_fix2_1770126721/
+
+8) Verification results (catalog/negotiation/transfer + known blockers)
+- Sources: /home/etri_lee/tutorial-resources/mxd/MXD Service APIs.postman_collection.json, /home/etri_lee/tutorial-resources/mxd/postman/management_api_tests.json, /home/etri_lee/tutorial-resources/mxd/docs/EDR Transfer Tutorial.md, /home/etri_lee/tutorial-resources/mxd/debug_progress.md
+
+
+PPT (12 slides; each slide cites concrete sources)
+1) Title + scope
+- Sources: /home/etri_lee/tutorial-resources/mxd/README.md
+
+2) "What is MXD?" component map (EDC + IH + Vault + Postgres + BDRS + issuer)
+- Sources: /home/etri_lee/tutorial-resources/mxd/README.md, /home/etri_lee/tutorial-resources/mxd/main.tf, /home/etri_lee/tutorial-resources/mxd/bdrs.tf
+
+3) Port map (local + in-cluster)
+- Sources: /home/etri_lee/tutorial-resources/mxd/modules/identity-hub/variables.tf, /home/etri_lee/tutorial-resources/mxd/port-forward.sh
+
+4) IaC entrypoints (where config lives)
+- Sources: /home/etri_lee/tutorial-resources/mxd/main.tf, /home/etri_lee/tutorial-resources/mxd/alice.tf, /home/etri_lee/tutorial-resources/mxd/bob.tf, /home/etri_lee/tutorial-resources/mxd/modules/**/main.tf
+
+5) Runtime versions (images/tags)
+- Sources: /home/etri_lee/tutorial-resources/mxd/modules/connector/values.yaml, /home/etri_lee/tutorial-resources/mxd/bdrs.tf
+
+6) Seeding pipeline (Newman job + collections)
+- Sources: /home/etri_lee/tutorial-resources/mxd/seed_data.tf, /home/etri_lee/tutorial-resources/mxd/MXD Management API Seed.postman_collection.json
+
+7) Happy-path verification flow (catalog -> negotiation -> transfer)
+- Sources: /home/etri_lee/tutorial-resources/mxd/MXD Service APIs.postman_collection.json, /home/etri_lee/tutorial-resources/mxd/postman/management_api_tests.json
+
+8) Debug incident #1: DID serving (204/404/200) and path rules
+- Sources: /home/etri_lee/tutorial-resources/mxd/debug_progress.md, /home/etri_lee/tutorial-resources/mxd/modules/identity-hub/ingress.tf, /tmp/mxd_1770107389/ (did checks)
+
+9) Debug incident #2: Presentation Query endpoint + auth shape
+- Sources: /home/etri_lee/tutorial-resources/mxd/debug_progress.md, /home/etri_lee/tutorial-resources/mxd/alice.tf, /home/etri_lee/tutorial-resources/mxd/bob.tf
+
+10) Debug incident #3: STS invalid_client (env/db/vault alignment)
+- Sources: /home/etri_lee/tutorial-resources/mxd/debug_progress.md, /home/etri_lee/tutorial-resources/mxd/modules/connector/main.tf, /home/etri_lee/tutorial-resources/mxd/setup_db.sh, /home/etri_lee/tutorial-resources/mxd/setup_vaults.sh (values redacted)
+
+11) Debug incident #4: BDRS "Token verification failed" + Postman seed root cause
+- Sources: /home/etri_lee/tutorial-resources/mxd/POSTMAN_FIXES_SUMMARY.md, /home/etri_lee/tutorial-resources/mxd/APPLY_FIXES.md, /home/etri_lee/tutorial-resources/mxd/bdrs.tf, /tmp/mxd_fix2_1770126721/
+
+12) Current status + proof artifacts (what works + what's blocked)
+- Sources: /home/etri_lee/tutorial-resources/mxd/debug_progress.md, /home/etri_lee/tutorial-resources/mxd/port-forward.log, /tmp/mxd_1770114434/
+
+
+External citations you can optionally add (protocol/standards slides)
+- DSP spec: https://eclipse-dataspace-protocol-base.github.io/DataspaceProtocol/2025-1/
+- DCP spec: https://eclipse-dataspace-dcp.github.io/decentralized-claims-protocol/v1.0.1/
+- DCP trust model: https://github.com/eclipse-dataspace-dcp/decentralized-claims-protocol/tree/main/specifications/trust.model.md
+- EDC core: https://github.com/eclipse-edc/Connector
+- Tractus-X org: https://github.com/eclipse-tractusx
+- IdentityHub impl (STS/DID concepts): https://github.com/eclipse-tractusx/identity-hub
+- VP protocol reference: https://github.com/eclipse-dataspace-dcp/decentralized-claims-protocol/tree/main/specifications/verifiable.presentation.protocol.md

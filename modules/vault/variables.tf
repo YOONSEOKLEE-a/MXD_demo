@@ -31,3 +31,9 @@ variable "vault-token" {
   description = "This is the authentication token for the vault. DO NOT USE THIS IN PRODUCTION!"
   type        = string
 }
+
+variable "seed_secrets" {
+  type = map(string)
+  default = {}
+  description = "Map of secret names to their content values to be seeded on vault startup"
+}

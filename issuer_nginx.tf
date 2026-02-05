@@ -91,8 +91,9 @@ resource "kubernetes_service" "dataspace-issuer-did-server-service" {
     }
     # we need a stable IP, otherwise there will be a cycle with the issuer
     port {
-      name = "web"
-      port = 80
+      name        = "web"
+      port        = 80
+      target_port = 80
     }
   }
 }

@@ -104,7 +104,7 @@ resource "kubernetes_job" "seed_connectors_via_mgmt_api" {
             "--env-var", "PARTICIPANT_DID=${var.alice-did}",
             "--env-var", "CONTROL_PLANE_HOST=alice-controlplane",
             "--env-var", "PARTICIPANT_CONTEXT_ID=${var.alice-did}",
-            "--env-var", "PARTICIPANT_CONTEXT_ID_BASE64=ZGlkOndlYjphbGljZS1paCUzQTcwODM6YWxpY2U=",
+            "--env-var", "PARTICIPANT_CONTEXT_ID_BASE64=${local.alice_did_base64}",
             "--env-var",
             "IDENTITYHUB_URL=http://${var.alice-identityhub-host}:${module.alice-identityhub.ports.credentials-api}/api/credentials",
             "--env-var", "MEMBERSHIP_CREDENTIAL=${file("${path.module}/assets/alice.membership.jwt")}",
@@ -129,7 +129,7 @@ resource "kubernetes_job" "seed_connectors_via_mgmt_api" {
             "--env-var", "PARTICIPANT_DID=${var.bob-did}",
             "--env-var", "CONTROL_PLANE_HOST=bob-controlplane",
             "--env-var", "PARTICIPANT_CONTEXT_ID=${var.bob-did}",
-            "--env-var", "PARTICIPANT_CONTEXT_ID_BASE64=ZGlkOndlYjpib2ItaWglM0E3MDgzOmJvYg==",
+            "--env-var", "PARTICIPANT_CONTEXT_ID_BASE64=${local.bob_did_base64}",
             "--env-var",
             "IDENTITYHUB_URL=http://${var.bob-identityhub-host}:${module.bob-identityhub.ports.credentials-api}/api/credentials",
             "--env-var", "MEMBERSHIP_CREDENTIAL=${file("${path.module}/assets/bob.membership.jwt")}",
@@ -152,9 +152,10 @@ resource "kubernetes_job" "seed_connectors_via_mgmt_api" {
             "--folder", "Seed Dataspace Issuer",
             "--env-var", "ISSUER_ADMIN_URL=http://${module.dataspace-issuer.endpoints.admin}",
             "--env-var", "ISSUER_CS_URL=http://${module.dataspace-issuer.endpoints.identity}",
+            "--env-var", "ISSUER_API_KEY=${var.issuer-superuser-apikey}",
             "--env-var", "CONSUMER_ID=${var.alice-did}",
             "--env-var", "CONSUMER_NAME=MXD Participant Alice",
-            "--env-var", "PROVIDER_DID=${var.bob-did}",
+            "--env-var", "PROVIDER_ID=${var.bob-did}",
             "--env-var", "PROVIDER_NAME=MXD Participant Bob",
             "/opt/collection/${local.newman_collection_name}"
           ]
@@ -189,4 +190,6 @@ resource "kubernetes_config_map" "seed-collection" {
 
 locals {
   newman_collection_name = "mxd-seed.json"
+  alice_did_base64       = base64encode(var.alice-did)
+  bob_did_base64         = base64encode(var.bob-did)
 }

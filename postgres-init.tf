@@ -25,6 +25,7 @@ module "postgres" {
   instance-name    = each.key
   database-port    = var.postgres-port
   init-sql-configs = ["${each.key}-initdb-config"]
+  initdb-version   = each.value.database-name
 }
 
 resource "kubernetes_config_map" "postgres-initdb-config" {
@@ -61,13 +62,13 @@ locals {
     }
 
     alice = {
-      database-name     = "alice",
+      database-name     = "alice_0112",
       database-username = "alice"
       database-password = "alice"
     }
 
     bob = {
-      database-name     = "bob",
+      database-name     = "bob_0112",
       database-username = "bob"
       database-password = "bob"
     }

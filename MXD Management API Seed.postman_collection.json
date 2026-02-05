@@ -1,0 +1,1753 @@
+{
+  "info": {
+    "_postman_id": "1078e5af-4971-4b2a-819e-5209e3ca33f4",
+    "name": "MXD Management API Seed",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51462947",
+    "_collection_link": "https://go.postman.co/collection/51462947-1078e5af-4971-4b2a-819e-5209e3ca33f4?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "SeedData",
+      "item": [
+        {
+          "name": "Create Asset 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new asset) or 409 Conflict (if asset already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"asset-1\",\n    \"@type\": \"Asset\",\n    \"properties\": {\n        \"id\": \"asset-1\",\n        \"description\": \"MXD Asset 1: this Asset is available to holders of the DataExchangeGovernance credential\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n        \"proxyPath\": \"true\",\n        \"proxyQueryParams\": \"true\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/assets",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "assets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Asset 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new asset) or 409 Conflict (if asset already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"asset-2\",\n    \"@type\": \"Asset\",\n    \"properties\": {\n        \"id\": \"asset-2\",\n        \"description\": \"MXD Asset 2: this Asset is available to holders of the DataExchangeGovernance credential\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n        \"proxyPath\": \"true\",\n        \"proxyQueryParams\": \"true\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/assets",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "assets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Asset 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new asset) or 409 Conflict (if asset already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"@context\": {},\n  \"properties\": {\n    \"id\": \"asset-3\",\n    \"description\": \"MXD Asset 3: this Demo Asset is only available to holders of the Dismantler credential\"\n  },\n  \"dataAddress\": {\n    \"@type\": \"DataAddress\",\n    \"type\": \"HttpData\",\n    \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n    \"proxyPath\": \"true\",\n    \"proxyQueryParams\": \"true\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/assets",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "assets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create \"Membership\" policy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new policy) or 409 Conflict (if policy already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        \"https://w3id.org/tractusx/policy/v1.0.0\",\n        \"http://www.w3.org/ns/odrl.jsonld\"\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-membership\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"Membership\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"active\"\n                }\n            }\n        ]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/policydefinitions",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "policydefinitions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create \"Data Ex Gov\" policy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new policy) or 409 Conflict (if policy already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        \"https://w3id.org/tractusx/policy/v1.0.0\",\n        \"http://www.w3.org/ns/odrl.jsonld\"\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-deg\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"FrameworkAgreement\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"DataExchangeGovernance\"\n                }\n            }\n        ]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/policydefinitions",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "policydefinitions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create \"Dismantler\" policy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new policy) or 409 Conflict (if policy already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        \"https://w3id.org/tractusx/policy/v1.0.0\",\n        \"http://www.w3.org/ns/odrl.jsonld\"\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-dismantler\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"Dismantler\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"active\"\n                }\n            }\n        ]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/policydefinitions",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "policydefinitions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Contract Definition 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new contract definition) or 409 Conflict (if contract deifinition already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"1\",\n    \"@type\": \"ContractDefinition\",\n    \"accessPolicyId\": \"require-membership\",\n    \"contractPolicyId\": \"require-membership\",\n    \"assetsSelector\" : {\n        \"@type\" : \"CriterionDto\",\n        \"operandLeft\": \"https://w3id.org/edc/v0.0.1/ns/id\",\n        \"operator\": \"in\",\n        \"operandRight\": [\"asset-1\", \"asset-2\"]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/contractdefinitions",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "contractdefinitions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Contract Definition 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new contract definition) or 409 Conflict (if contract deifinition already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"3\",\n    \"@type\": \"ContractDefinition\",\n    \"accessPolicyId\": \"require-membership\",\n    \"contractPolicyId\": \"require-dismantler\",\n    \"assetsSelector\" : {\n        \"@type\" : \"CriterionDto\",\n        \"operandLeft\": \"https://w3id.org/edc/v0.0.1/ns/id\",\n        \"operator\": \"=\",\n        \"operandRight\": \"asset-3\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/contractdefinitions",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "contractdefinitions"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SeedCatalogServer",
+      "item": [
+        {
+          "name": "Create CatalogAsset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new asset) or 409 Conflict (if asset already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"catalog-asset\",\n    \"@type\": \"Asset\",\n    \"properties\": {\n        \"description\": \"This is a linked asset that points to the catalog of the ALICE connector.\",\n        \"isCatalog\": \"true\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"http://alice-controlplane:8084/api/v1/dsp\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/assets",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "assets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Asset 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new asset) or 409 Conflict (if asset already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@type\": \"Asset\",\n    \"@id\": \"asset-1\",\n    \"properties\": {\n        \"id\": \"asset-1\",\n        \"description\": \"Normal Asset on the Catalog Server\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n        \"proxyPath\": \"true\",\n        \"proxyQueryParams\": \"true\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/assets",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "assets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create \"Membership\" policy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new policy) or 409 Conflict (if policy already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": {\n        \"edc\": \"https://w3id.org/edc/v0.0.1/ns/\",\n        \"odrl\": \"http://www.w3.org/ns/odrl/2/\",\n        \"cx-policy\": \"https://w3id.org/catenax/policy/\"\n    },\n    \"@id\": \"membership-policy\",\n    \"policy\": {\n        \"@type\": \"set\",\n        \"odrl:permission\": [\n            {\n                \"odrl:action\": \"use\",\n                \"odrl:constraint\": {\n                    \"odrl:leftOperand\": \"https://w3id.org/catenax/policy/Membership\",\n                    \"odrl:operator\": {\n                        \"@id\": \"odrl:eq\"\n                    },\n                    \"odrl:rightOperand\": \"active\"\n                }\n            }\n        ]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/policydefinitions",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "policydefinitions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create \"Data Ex Gov\" policy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new policy) or 409 Conflict (if policy already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        \"https://w3id.org/tractusx/policy/v1.0.0\",\n        \"http://www.w3.org/ns/odrl.jsonld\"\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-deg\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"FrameworkAgreement\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"DataExchangeGovernance\"\n                }\n            }\n        ]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{ALICE_MANAGEMENT_URL}}/v3/policydefinitions",
+              "host": [
+                "{{ALICE_MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "policydefinitions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Contract Definition 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content (if new contract definition) or 409 Conflict (if contract deifinition already exists)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 409])",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"membership-required-def\",\n    \"@type\": \"ContractDefinition\",\n    \"accessPolicyId\": \"require-membership\",\n    \"contractPolicyId\": \"require-deg\",\n    \"assetsSelector\" : {\n        \"@type\" : \"CriterionDto\",\n        \"operandLeft\": \"https://w3id.org/edc/v0.0.1/ns/id\",\n        \"operator\": \"in\",\n        \"operandRight\": [\"asset-1\", \"linked-asset-1\"]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{MANAGEMENT_URL}}/v3/contractdefinitions",
+              "host": [
+                "{{MANAGEMENT_URL}}"
+              ],
+              "path": [
+                "v3",
+                "contractdefinitions"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SeedBDRS",
+      "item": [
+        {
+          "name": "Create Alice BPN Mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \"bpn\": \"BPNL000000000001\",\\n    \"did\": \"did:web:alice-ih%3A7083:alice\"\\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BDRS_MGMT_URL}}/bpn-directory",
+              "host": [
+                "{{BDRS_MGMT_URL}}"
+              ],
+              "path": [
+                "bpn-directory"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bob BPN Mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \"bpn\": \"BPNL000000000002\",\\n    \"did\": \"did:web:bob-ih%3A7083:bob\"\\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BDRS_MGMT_URL}}/bpn-directory",
+              "host": [
+                "{{BDRS_MGMT_URL}}"
+              ],
+              "path": [
+                "bpn-directory"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Trudy BPN Mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bpn\": \"{{TRUDY_BPN}}\",\n  \"did\": \"{{TRUDY_DID}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BDRS_MGMT_URL}}/bpn-directory",
+              "host": [
+                "{{BDRS_MGMT_URL}}"
+              ],
+              "path": [
+                "bpn-directory"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SeedIH",
+      "item": [
+        {
+          "name": "Create Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response status code is 200 or 409\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"clientId\", jsonData.clientId);",
+                  "pm.environment.set(\"clientSecret\", jsonData.clientSecret);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"active\": true,\n    \"did\": \"did:web:alice-ih%3A7083:alice\",\n    \"participantId\": \"did:web:alice-ih%3A7083:alice\",\n    \"key\": {\n        \"keyGeneratorParams\": {\n            \"algorithm\": \"EdDSA\",\n            \"curve\": \"Ed25519\"\n        },\n        \"keyId\": \"did:web:alice-ih%3A7083:alice#signing-key-1\",\n        \"privateKeyAlias\": \"did:web:alice-ih%3A7083:alice#signing-key-1\"\n    },\n    \"serviceEndpoints\": [\n        {\n            \"type\": \"CredentialService\",\n            \"serviceEndpoint\": \"http://alice-ih:7082/api/credentials/v1/participants/ZGlkOndlYjphbGljZS1paCUzQTcwODM6YWxpY2U=\",\n            \"id\": \"credentialservice-1\"\n        },\n        {\n            \"type\": \"ProtocolEndpoint\",\n            \"serviceEndpoint\": \"http://alice-controlplane:8084/api/dsp\",\n            \"id\": \"dsp-url\"\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:7081/api/identity/v1alpha/participants",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "7081",
+              "path": [
+                "api",
+                "identity",
+                "v1alpha",
+                "participants"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Participant(2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response status code is 200 or 409\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"clientId\", jsonData.clientId);",
+                  "pm.environment.set(\"clientSecret\", jsonData.clientSecret);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"active\": true,\n    \"did\": \"did:web:bob-ih%3A7083:bob\",\n    \"participantId\": \"did:web:bob-ih%3A7083:bob\",\n    \"key\": {\n        \"keyGeneratorParams\": {\n            \"algorithm\": \"EdDSA\",\n            \"curve\": \"Ed25519\"\n        },\n        \"keyId\": \"did:web:bob-ih%3A7083:bob#signing-key-1\",\n        \"privateKeyAlias\": \"did:web:bob-ih%3A7083:bob#signing-key-1\"\n    },\n    \"serviceEndpoints\": [\n        {\n            \"type\": \"CredentialService\",\n            \"serviceEndpoint\": \"http://bob-ih:7082/api/credentials/v1/participants/ZGlkOndlYjpib2ItaWglM0E3MDgzOmJvYg==\",\n            \"id\": \"credentialservice-1\"\n        },\n        {\n            \"type\": \"ProtocolEndpoint\",\n            \"serviceEndpoint\": \"http://bob-tractusx-connector-controlplane:8084/api/v1/dsp\",\n            \"id\": \"dsp-url\"\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:7091/api/identity/v1alpha/participants",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "7091",
+              "path": [
+                "api",
+                "identity",
+                "v1alpha",
+                "participants"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Membership Credential",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response status code is 204 or 409\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Api-Key",
+                "value": "password",
+                "type": "text",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"membership-credential\",\n    \"participantContextId\": \"{{PARTICIPANT_CONTEXT_ID}}\",\n    \"issuancePolicy\": null,\n    \"reissuancePolicy\": null,\n    \"verifiableCredentialContainer\": {\n        \"format\": \"VC1_0_JWT\",\n        \"credential\": {\n            \"@context\": [\n                \"https://www.w3.org/2018/credentials/v1\",\n                \"https://w3id.org/security/suites/jws-2020/v1\",\n                \"https://www.w3.org/ns/did/v1\",\n                {\n                    \"mxd-credentials\": \"https://w3id.org/mxd/credentials/\",\n                    \"membership\": \"mxd-credentials:membership\",\n                    \"membershipType\": \"mxd-credentials:membershipType\",\n                    \"website\": \"mxd-credentials:website\",\n                    \"contact\": \"mxd-credentials:contact\",\n                    \"since\": \"mxd-credentials:since\"\n                }\n            ],\n            \"id\": \"http://org.yourdataspace.com/credentials/2347\",\n            \"type\": [\n                \"VerifiableCredential\",\n                \"MembershipCredential\"\n            ],\n            \"issuer\": \"did:web:dataspace-issuer\",\n            \"issuanceDate\": \"2023-08-18T00:00:00Z\",\n            \"credentialSubject\": {\n                \"id\": \"{{PARTICIPANT_DID}}\",\n                \"membership\": {\n                    \"membershipType\": \"FullMember\",\n                    \"website\": \"www.whatever.com\",\n                    \"contact\": \"fizz.buzz@whatever.com\",\n                    \"since\": \"2023-01-01T00:00:00Z\"\n                }\n            }\n        },\n        \"rawVc\": \"{{MEMBERSHIP_CREDENTIAL}}\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8286/management/v3/catalog/dataset/request",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8286",
+              "path": [
+                "management",
+                "v3",
+                "catalog",
+                "dataset",
+                "request"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "(2)Create Membership Credential(2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response status code is 204 or 409\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Api-Key",
+                "value": "password",
+                "type": "text",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\"id\": \"membership-credential-bob\",\n\"participantContextId\": \"did:web:bob\",\n\"issuancePolicy\": null,\n\"reissuancePolicy\": null,\n\"verifiableCredentialContainer\": {\n\"format\": \"VC1_0_JWT\",\n\"credential\": {\n\"@context\": [\n\"https://www.w3.org/2018/credentials/v1\n\",\n\"https://w3id.org/security/suites/jws-2020/v1\n\",\n\"https://www.w3.org/ns/did/v1\n\",\n{\n\"mxd-credentials\": \"https://w3id.org/mxd/credentials/\n\",\n\"membership\": \"mxd-credentials:membership\",\n\"membershipType\": \"mxd-credentials:membershipType\",\n\"website\": \"mxd-credentials:website\",\n\"contact\": \"mxd-credentials:contact\",\n\"since\": \"mxd-credentials:since\"\n}\n],\n\"id\": \"http://org.yourdataspace.com/credentials/2347\n\",\n\"type\": [\"VerifiableCredential\", \"MembershipCredential\"],\n\"issuer\": \"did:web:dataspace-issuer\",\n\"issuanceDate\": \"2023-08-18T00:00:00Z\",\n\"credentialSubject\": {\n\"id\": \"did:web:bob\",\n\"membership\": {\n\"membershipType\": \"FullMember\",\n\"website\": \"www.whatever.com\n\",\n\"contact\": \"fizz.buzz@whatever.com\n\",\n\"since\": \"2023-01-01T00:00:00Z\"\n}\n}\n},\n\"rawVc\": \"{{MEMBERSHIP_CREDENTIAL_BOB}}\"\n}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:7091/api/identity/v1alpha/participants/ZGlkOndlYjpib2I=/credentials",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "7091",
+              "path": [
+                "api",
+                "identity",
+                "v1alpha",
+                "participants",
+                "ZGlkOndlYjpib2I=",
+                "credentials"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create DataExGov Credential",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response status code is 204 or 409\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"deg-credential-alice-v1\",\n    \"participantContextId\": \"did:web:alice-ih%3A7083:alice\",\n    \"issuancePolicy\": null,\n    \"reissuancePolicy\": null,\n    \"verifiableCredentialContainer\": {\n        \"format\": \"VC1_0_JWT\",\n        \"credential\": {\n            \"@context\": [\n                \"https://www.w3.org/2018/credentials/v1\",\n                \"https://w3id.org/catenax/credentials/v1.0.0\"\n            ],\n            \"id\": \"1f36af58-0fc0-4b24-9b1c-e37d59668089\",\n            \"type\": [\n                \"VerifiableCredential\",\n                \"DataExchangeGovernanceCredential\"\n            ],\n            \"issuer\": \"did:web:dataspace-issuer\",\n            \"issuanceDate\": \"2024-01-22T18:56:59Z\",\n            \"expirationDate\": \"2032-06-16T18:56:59Z\",\n            \"credentialSubject\": {\n                \"id\": \"did:web:alice-ih%3A7083:alice\",\n                \"holderIdentifier\": \"BPNL000000000001\",\n                \"contractTemplate\": \"https://public.catena-x.org/contracts/DataExchangeGovernance.v1.pdf\",\n                \"contractVersion\": \"1.0.0\"\n            }\n        },\n        \"rawVc\": \"eyJraWQiOiJkaWQ6d2ViOmRhdGFzcGFjZS1pc3N1ZXIja2V5LTEiLCJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSJ9.eyJpc3MiOiJkaWQ6d2ViOmRhdGFzcGFjZS1pc3N1ZXIiLCJhdWQiOiJkaWQ6d2ViOmFsaWNlLWloJTNBNzA4MzphbGljZSIsInN1YiI6ImRpZDp3ZWI6YWxpY2UtaWglM0E3MDgzOmFsaWNlIiwidmMiOnsiQGNvbnRleHQiOlsiaHR0cHM6Ly93d3cudzMub3JnLzIwMTgvY3JlZGVudGlhbHMvdjEiLCJodHRwczovL3czaWQub3JnL2NhdGVuYXgvY3JlZGVudGlhbHMvdjEuMC4wIl0sImlkIjoiMWYzNmFmNTgtMGZjMC00YjI0LTliMWMtZTM3ZDU5NjY4MDg5IiwidHlwZSI6WyJWZXJpZmlhYmxlQ3JlZGVudGlhbCIsIkRhdGFFeGNoYW5nZUdvdmVybmFuY2VDcmVkZW50aWFsIl0sImlzc3VlciI6ImRpZDp3ZWI6Y29tLmV4YW1wbGUuaXNzdWVyIiwiaXNzdWFuY2VEYXRlIjoiMjAyMS0wNi0xNlQxODo1Njo1OVoiLCJleHBpcmF0aW9uRGF0ZSI6IjIwMjItMDYtMTZUMTg6NTY6NTlaIiwiY3JlZGVudGlhbFN1YmplY3QiOnsiaWQiOiJkaWQ6d2ViOmFsaWNlLWloJTNBNzA4MzphbGljZSIsImhvbGRlcklkZW50aWZpZXIiOiJCUE5MMDAwMDAwMDAwMDAxIiwiZ3JvdXAiOiJVc2VDYXNlRnJhbWV3b3JrIiwidXNlQ2FzZSI6IkRhdGFFeGNoYW5nZUdvdmVybmFuY2UiLCJjb250cmFjdFRlbXBsYXRlIjoiaHR0cHM6Ly9jYXRlbmEteC5uZXQvZW4vY2F0ZW5hLXgtaW50cm9kdWNlLWltcGxlbWVudC9nb3Zlcm5hbmNlLWZyYW1ld29yay1mb3ItZGF0YS1zcGFjZS1vcGVyYXRpb25zIiwiY29udHJhY3RWZXJzaW9uIjoiYS5iIn19LCJpYXQiOjE3MjcwOTQ0MTN9.0cl_nlm0V830O2aCbYgYZ5nJJ-n5UBIS2dZyE_R-qkbNdfNs-5q9rwh5IubcAQV4SAvE46WvJGV9yAK5qIMQBw\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:7081/api/identity/v1alpha/participants/ZGlkOndlYjphbGljZS1paCUzQTcwODM6YWxpY2U=/credentials",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "7081",
+              "path": [
+                "api",
+                "identity",
+                "v1alpha",
+                "participants",
+                "ZGlkOndlYjphbGljZS1paCUzQTcwODM6YWxpY2U=",
+                "credentials"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "(2)Create DataExGov Credential(2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response status code is 204 or 409\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"deg-credential-bob-v1\",\n    \"participantContextId\": \"did:web:bob-ih%3A7083:bob\",\n    \"issuancePolicy\": null,\n    \"reissuancePolicy\": null,\n    \"verifiableCredentialContainer\": {\n        \"format\": \"VC1_0_JWT\",\n        \"credential\": {\n            \"@context\": [\n                \"https://www.w3.org/2018/credentials/v1\",\n                \"https://w3id.org/catenax/credentials/v1.0.0\"\n            ],\n            \"id\": \"2g47bg69-1gd1-5c35-0c2d-f48e60779090\",\n            \"type\": [\n                \"VerifiableCredential\",\n                \"DataExchangeGovernanceCredential\"\n            ],\n            \"issuer\": \"did:web:dataspace-issuer\",\n            \"issuanceDate\": \"2024-01-22T18:56:59Z\",\n            \"expirationDate\": \"2032-06-16T18:56:59Z\",\n            \"credentialSubject\": {\n                \"id\": \"did:web:bob-ih%3A7083:bob\",\n                \"holderIdentifier\": \"BPNL000000000002\",\n                \"contractTemplate\": \"https://public.catena-x.org/contracts/DataExchangeGovernance.v1.pdf\",\n                \"contractVersion\": \"1.0.0\"\n            }\n        },\n        \"rawVc\": \"eyJraWQiOiJkaWQ6d2ViOmRhdGFzcGFjZS1pc3N1ZXIja2V5LTEiLCJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSJ9.eyJpc3MiOiJkaWQ6d2ViOmRhdGFzcGFjZS1pc3N1ZXIiLCJhdWQiOiJkaWQ6d2ViOmJvYi1paCUzQTcwODM6Ym9iIiwic3ViIjoiZGlkOndlYjpib2ItaWglM0E3MDgzOmJvYiIsInZjIjp7IkBjb250ZXh0IjpbImh0dHBzOi8vd3d3LnczLm9yZy8yMDE4L2NyZWRlbnRpYWxzL3YxIiwiaHR0cHM6Ly93M2lkLm9yZy9jYXRlbmF4L2NyZWRlbnRpYWxzL3YxLjAuMCJdLCJpZCI6IjFmMzZhZjU4LTBmYzAtNGIyNC05YjFjLWUzN2Q1OTY2ODA4OSIsInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiLCJEYXRhRXhjaGFuZ2VHb3Zlcm5hbmNlQ3JlZGVudGlhbCJdLCJpc3N1ZXIiOiJkaWQ6d2ViOmNvbS5leGFtcGxlLmlzc3VlciIsImlzc3VhbmNlRGF0ZSI6IjIwMjEtMDYtMTZUMTg6NTY6NTlaIiwiZXhwaXJhdGlvbkRhdGUiOiIyMDIyLTA2LTE2VDE4OjU2OjU5WiIsImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImlkIjoiZGlkOndlYjpib2ItaWglM0E3MDgzOmJvYiIsImhvbGRlcklkZW50aWZpZXIiOiJCUE5MMDAwMDAwMDAwMDAyIiwiZ3JvdXAiOiJVc2VDYXNlRnJhbWV3b3JrIiwidXNlQ2FzZSI6IkRhdGFFeGNoYW5nZUdvdmVybmFuY2UiLCJjb250cmFjdFRlbXBsYXRlIjoiaHR0cHM6Ly9jYXRlbmEteC5uZXQvZW4vY2F0ZW5hLXgtaW50cm9kdWNlLWltcGxlbWVudC9nb3Zlcm5hbmNlLWZyYW1ld29yay1mb3ItZGF0YS1zcGFjZS1vcGVyYXRpb25zIiwiY29udHJhY3RWZXJzaW9uIjoiYS5iIn19LCJpYXQiOjE3MjcwOTQ0MTN9.kyx50sxO7c6cD8oOwrPibVmnRAXdFF2dRgGJ0Ch6J5Pjd7vDicb6xo-cPcG8rnm0rKiThhiHGg6I8f0_m82uCA\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:7091/api/identity/v1alpha/participants/ZGlkOndlYjpib2ItaWglM0E3MDgzOmJvYg==/credentials",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "7091",
+              "path": [
+                "api",
+                "identity",
+                "v1alpha",
+                "participants",
+                "ZGlkOndlYjpib2ItaWglM0E3MDgzOmJvYg==",
+                "credentials"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "apikey",
+        "apikey": [
+          {
+            "key": "value",
+            "value": "c3VwZXItdXNlcg==.c3VwZXItc2VjcmV0LWtleQo=",
+            "type": "string"
+          },
+          {
+            "key": "key",
+            "value": "x-api-key",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seed Dataspace Issuer",
+      "item": [
+        {
+          "name": "Create Dataspace Issuer Participant Context",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"clientId\", jsonData.clientId);",
+                  "pm.environment.set(\"clientSecret\", jsonData.clientSecret);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "password",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n            \"roles\":[\"admin\"],\n            \"serviceEndpoints\":[\n              {\n                 \"type\": \"IssuerService\",\n                 \"serviceEndpoint\": \"http://dataspace-issuer-service:10012/api/issuance/v1alpha/issuers/ZGlkOndlYjpkYXRhc3BhY2UtaXNzdWVyLXNlcnZpY2UlM0ExMDAxNjppc3N1ZXI=\",\n                 \"id\": \"issuer-service-1\"\n              }\n            ],\n            \"active\": true,\n            \"participantId\": \"did:web:dataspace-issuer-service%3A10016:issuer\",\n            \"did\": \"did:web:dataspace-issuer-service%3A10016:issuer\",\n            \"key\":{\n                \"keyId\": \"did:web:dataspace-issuer-service%3A10016:issuer#key-1\",\n                \"privateKeyAlias\": \"key-1\",\n                \"keyGeneratorParams\":{\n                  \"algorithm\": \"EdDSA\"\n                }\n            }\n      }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8288/api/v1/identity/v1alpha/participants",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8288",
+              "path": [
+                "api",
+                "v1",
+                "identity",
+                "v1alpha",
+                "participants"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Account for Alice in IssuerService",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n            \"roles\":[\"admin\"],\n            \"serviceEndpoints\":[\n              {\n                 \"type\": \"IssuerService\",\n                 \"serviceEndpoint\": \"http://dataspace-issuer-service:10012/api/issuance/v1alpha/issuers/ZGlkOndlYjpkYXRhc3BhY2UtaXNzdWVyLXNlcnZpY2UlM0ExMDAxNjppc3N1ZXI=\",\n                 \"id\": \"issuer-service-1\"\n              }\n            ],\n            \"active\": true,\n            \"participantId\": \"{{CONSUMER_ID}}\",\n            \"did\": \"{{CONSUMER_ID}}\",\n            \"key\":{\n                \"keyId\": \"{{CONSUMER_ID}}#key-1\",\n                \"privateKeyAlias\": \"key-1\",\n                \"keyGeneratorParams\":{\n                  \"algorithm\": \"EdDSA\"\n                }\n            }\n      }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{ISSUER_CS_URL}}/api/identity/v1alpha/participants",
+              "host": [
+                "{{ISSUER_CS_URL}}"
+              ],
+              "path": [
+                "api",
+                "identity",
+                "v1alpha",
+                "participants"
+              ]
+            },
+            "description": "Generated from cURL: curl -sL -X POST 'http://localhost:10013/api/admin/v1alpha/participants' \\\n-H 'Content-Type: application/json' \\\n-d '{ \"did\": \"did:web:localhost%3A7083\", \"participantId\": \"did:web:localhost%3A7083\", \"name\": \"Consumer Participant\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Account for Bob in IssuerService",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n            \"roles\":[\"admin\"],\n            \"serviceEndpoints\":[\n              {\n                 \"type\": \"IssuerService\",\n                 \"serviceEndpoint\": \"http://dataspace-issuer-service:10012/api/issuance/v1alpha/issuers/ZGlkOndlYjpkYXRhc3BhY2UtaXNzdWVyLXNlcnZpY2UlM0ExMDAxNjppc3N1ZXI=\",\n                 \"id\": \"issuer-service-1\"\n              }\n            ],\n            \"active\": true,\n            \"participantId\": \"{{PROVIDER_ID}}\",\n            \"did\": \"{{PROVIDER_ID}}\",\n            \"key\":{\n                \"keyId\": \"{{PROVIDER_ID}}#key-1\",\n                \"privateKeyAlias\": \"key-1\",\n                \"keyGeneratorParams\":{\n                  \"algorithm\": \"EdDSA\"\n                }\n            }\n      }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{ISSUER_CS_URL}}/api/identity/v1alpha/participants",
+              "host": [
+                "{{ISSUER_CS_URL}}"
+              ],
+              "path": [
+                "api",
+                "identity",
+                "v1alpha",
+                "participants"
+              ]
+            },
+            "description": "Generated from cURL: curl -sL -X POST 'http://localhost:10013/api/admin/v1alpha/participants' \\\n-H 'Content-Type: application/json' \\\n-d '{ \"did\": \"did:web:localhost%3A7083\", \"participantId\": \"did:web:localhost%3A7083\", \"name\": \"Consumer Participant\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Create attestation definitions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"membership-credential-def-final\",\n  \"credentialType\": \"MembershipCredential\",\n  \"validity\": 31536000,\n  \"format\": \"VC1_0_JWT\",\n  \"jsonSchemaUrl\": \"https://example.com/schema/membership-credential.json\",\n  \"attestations\": [\"verify-presentation-final\"],\n  \"mappings\": [],\n  \"rules\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:10013/api/admin/v1alpha/participants/cGFydGljaXBhbnQtYWxpY2U=/attestations",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "10013",
+              "path": [
+                "api",
+                "admin",
+                "v1alpha",
+                "participants",
+                "cGFydGljaXBhbnQtYWxpY2U=",
+                "attestations"
+              ]
+            },
+            "description": "Generated from cURL: curl -sL -X POST 'http://localhost:10013/api/admin/v1alpha/attestations' \\\n-H 'Content-Type: application/json' \\\n-d '{\n  \"attestationType\": \"demo\",\n  \"configuration\": {\n  },\n  \"id\": \"demo-attestation-def-1\"\n}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Create credential definitions",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"alice-membership-final-v300\",\n  \"credentialType\": \"MembershipCredential\",\n  \"validity\": 31536000,\n  \"format\": \"VC1_0_JWT\",\n  \"jsonSchemaUrl\": \"https://example.com/schema.json\",\n  \"attestations\": [\n    \"verify-presentation-final\"\n  ],\n  \"mappings\": [],\n  \"rules\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:10013/api/admin/v1alpha/participants/cGFydGljaXBhbnQtYWxpY2U=/credentialdefinitions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "10013",
+              "path": [
+                "api",
+                "admin",
+                "v1alpha",
+                "participants",
+                "cGFydGljaXBhbnQtYWxpY2U=",
+                "credentialdefinitions"
+              ]
+            },
+            "description": "Generated from cURL: curl -sL -X POST 'http://localhost:10013/api/admin/v1alpha/credentialdefinitions' \\\n-H 'Content-Type: application/json' \\\n-d '{\n      \"attestations\": [\n        \"demo-attestation-def-1\"\n      ],\n      \"credentialType\": \"DemoCredential\",\n      \"dataModel\": \"V_1_1\",\n      \"id\": \"demo-credential-def-1\",\n      \"jsonSchema\": \"\",\n      \"jsonSchemaUrl\": \"https://example.com/schema/demo-credential.json\",\n      \"mappings\": [\n        {\n          \"input\": \"name\",\n          \"output\": \"credentialSubject.name\",\n          \"required\": \"true\"\n        }\n      ],\n      \"rules\": []\n    }'"
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "apikey",
+        "apikey": [
+          {
+            "key": "value",
+            "value": "c3VwZXItdXNlcg==.c3VwZXItc2VjcmV0LWtleQo=",
+            "type": "string"
+          },
+          {
+            "key": "key",
+            "value": "x-api-key",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [
+              "pm.test(\"Response status code is 20x or 409\", function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200,201,204, 409]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "value",
+        "value": "password",
+        "type": "string"
+      },
+      {
+        "key": "key",
+        "value": "X-Api-Key",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "MANAGEMENT_URL",
+      "value": "http://localhost/bob/management"
+    },
+    {
+      "key": "POLICY_BPN",
+      "value": "BPNL000000000000",
+      "type": "default"
+    },
+    {
+      "key": "EDC_NAMESPACE",
+      "value": "https://w3id.org/edc/v0.0.1/ns/",
+      "type": "string"
+    },
+    {
+      "key": "TX_NAMESPACE",
+      "value": "https://w3id.org/tractusx/v0.0.1/ns/",
+      "type": "string"
+    },
+    {
+      "key": "ALICE_BPN",
+      "value": "BPNL000000000001",
+      "type": "string"
+    },
+    {
+      "key": "BOB_BPN",
+      "value": "BPNL000000000002",
+      "type": "string"
+    },
+    {
+      "key": "TRUDY_BPN",
+      "value": "BPNL000000000003",
+      "type": "string"
+    },
+		{
+			"key": "ALICE_DID",
+			"value": "did:web:alice-ih%3A7083:alice",
+			"type": "string"
+		},
+		{
+			"key": "BOB_DID",
+			"value": "did:web:bob-ih%3A7083:bob",
+			"type": "string"
+		},
+		{
+			"key": "TRUDY_DID",
+			"value": "did:web:trudy-ih%3A7083:trudy",
+			"type": "string"
+		},
+		{
+			"key": "BDRS_MGMT_URL",
+			"value": "http://bdrs-server:8081/api/management",
+			"type": "string"
+		},
+    {
+      "key": "BUSINESS_PARTNER_GROUP",
+      "value": "gold-partners",
+      "type": "string"
+    },
+    {
+      "key": "IH_URL",
+      "value": "http://localhost/alice/cs/api/identity"
+    },
+    {
+      "key": "PARTICIPANT_DID",
+      "value": "did:web:alice",
+      "type": "string"
+    },
+    {
+      "key": "CONTROL_PLANE_HOST",
+      "value": "alice-controlplane",
+      "type": "string"
+    },
+    {
+      "key": "PARTICIPANT_CONTEXT_ID",
+      "value": "did:web:alice",
+      "type": "string"
+    },
+    {
+      "key": "PARTICIPANT_CONTEXT_ID_BASE64",
+      "value": "cGFydGljaXBhbnQtYWxpY2U=",
+      "type": "string"
+    },
+    {
+      "key": "IDENTITYHUB_URL",
+      "value": "alice-ih",
+      "type": "string"
+    },
+    {
+      "key": "MEMBERSHIP_CREDENTIAL",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "FRAMEWORK_CREDENTIAL",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "TYPE",
+      "value": "Sustainability",
+      "type": "string"
+    },
+    {
+      "key": "PROVIDER_DSP_ENDPOINT",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ISSUER_ADMIN_URL",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "ISSUER_CS_URL",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "CONSUMER_ID",
+      "value": "did:web:alice-ih%3A7083:alice",
+      "type": "default"
+    },
+    {
+      "key": "CONSUMER_NAME",
+      "value": "MXD Participant Alice",
+      "type": "string"
+    },
+    {
+      "key": "PROVIDER_ID",
+      "value": "did:web:bob-ih%3A7083:bob",
+      "type": "default"
+    },
+    {
+      "key": "PROVIDER_NAME",
+      "value": "MXD Participant Bob",
+      "type": "default"
+    }
+  ]
+}

@@ -49,6 +49,10 @@ resource "kubernetes_deployment" "postgres" {
               name = kubernetes_config_map.postgres-env.metadata[0].name
             }
           }
+          env {
+            name  = "INITDB_VERSION"
+            value = var.initdb-version
+          }
           port {
             container_port = 5432
             name           = "postgres-port"

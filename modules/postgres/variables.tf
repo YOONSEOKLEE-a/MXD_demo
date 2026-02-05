@@ -31,6 +31,11 @@ variable "init-sql-configs" {
   default     = []
 }
 
+variable "initdb-version" {
+  description = "Value used to force postgres pod restart when init SQL changes"
+  default     = ""
+}
+
 variable "namespace" {
   type        = string
   description = "Kubernetes namespace to use"

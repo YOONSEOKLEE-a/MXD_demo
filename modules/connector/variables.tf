@@ -33,6 +33,11 @@ variable "participantId" {
   description = "Participant ID of the connector. In Catena-X, this MUST be the BPN"
 }
 
+variable "participantContextId" {
+  type        = string
+  description = "Participant Context ID of the connector. In Catena-X, this MUST be the DID"
+}
+
 variable "database-host" {
   description = "IP address (ClusterIP) or host name of the postgres database host"
 }
@@ -115,3 +120,20 @@ variable "useSVE" {
   default     = false
 }
 
+variable "issuer_key_json" {
+  type        = string
+  description = "Issuer key JSON content from assets/issuer.key.json"
+  default     = ""
+}
+
+variable "vault_seed_secrets" {
+  type        = map(string)
+  description = "Additional secrets to seed in vault on startup"
+  default     = {}
+}
+
+variable "controlplane_env" {
+  type        = map(string)
+  description = "Extra control plane env vars that should be passed to the connector"
+  default     = {}
+}

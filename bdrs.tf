@@ -33,12 +33,13 @@ resource "helm_release" "bdrs-server" {
           enabled : true
           port : 1046
         }
-        trustedIssuers : ["did:web:dataspace-issuer"]
+        trustedIssuers : ["did:web:dataspace-issuer", "did:web:dataspace-issuer-service%3A10016:issuer", var.alice-did, var.bob-did]
         env : {
           EDC_API_AUTH_KEY : "password"
           EDC_DATASOURCE_DIDENTRY_USER : local.databases.bdrs.database-username
           EDC_DATASOURCE_DIDENTRY_PASSWORD : local.databases.bdrs.database-password
           EDC_IAM_DID_WEB_USE_HTTPS : "false"
+          JAVA_TOOL_OPTIONS : "-Dorg.slf4j.simpleLogger.log.org.eclipse.edc.iam=trace -Dorg.slf4j.simpleLogger.log.org.eclipse.edc.iam.identitytrust=trace"
         }
       }
       postgresql : {

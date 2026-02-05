@@ -11,6 +11,17 @@
 #       Metaform Systems, Inc. - initial API and implementation
 #
 
+locals {
+  # Generate vault kv put commands for each seed secret
+  seed_commands = [
+    for name, content in var.seed_secrets :
+    "/bin/vault kv put secret/${name} content='${replace(content, "'", "'\\''")}'"
+  ]
+
+  # Join all commands with && and add sleep at the beginning
+  postStart_script = length(local.seed_commands) > 0 ? join(" && ", concat(["sleep 5"], local.seed_commands)) : ""
+}
+
 resource "helm_release" "vault" {
   name      = var.humanReadableName
   namespace = var.namespace
@@ -44,19 +55,20 @@ resource "helm_release" "vault" {
   }
 
   values = [
-    file("${path.module}/vault-values.yaml"),
-    #     yamlencode({
-    #       "server" : {
-    #         "postStart" : [
-    #           "sh",
-    #           "-c",
-    #           join(" && ", [
-    #             "sleep 5",
-    #             "/bin/vault kv put secret/${var.aliases.sts-private-key} content=\"${tls_private_key.private_signing_key.private_key_pem}\"",
-    # #             "/bin/vault kv put secret/${local.public-key-alias} content=\"${tls_private_key.ecdsa.public_key_pem}\""
-    #           ])
-    #         ]
-    #       }
-    #     }),
+    yamlencode({
+      "server" : {
+        "postStart" : length(local.seed_commands) > 0 ? ["sh", "-c", local.postStart_script] : null
+      },
+      "hashicorp" : {
+        "timeout" : 30,
+        "healthCheck" : {
+          "enabled" : true,
+          "standbyOk" : true
+        },
+        "paths" : {
+          "secret" : "/v1/secret/data"
+        }
+      }
+    })
   ]
 }

@@ -19,4 +19,4 @@ hashicorp:
     enabled: true
     standbyOk: true
   paths:
-    secret: /v1/secret
+    secret: /v1/secret/data

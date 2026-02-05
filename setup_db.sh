@@ -21,16 +21,16 @@ psql -h ${PGSVC} -U bob -d bob -P pager=off -v ON_ERROR_STOP=1 <<'SQL'
 INSERT INTO public.edc_sts_client
 (id, client_id, did, name, secret_alias, private_key_alias, public_key_reference, created_at)
 SELECT
-  'bob-sts-client',
-  'did:web:bob-ih%3A7083:bob',
-  'did:web:bob-ih%3A7083:bob',
-  'bob',
-  'did:web:bob-ih%3A7083:bob-sts-client-secret',
+    'bob-sts-client',
+    'did:web:bob-ih%3A7083:bob',
+    'did:web:bob-ih%3A7083:bob',
+    'bob',
+    'bob-sts-client-secret',
   'key-1',
   'key-1',
   (extract(epoch from now())*1000)::bigint
 WHERE NOT EXISTS (
-  SELECT 1 FROM public.edc_sts_client WHERE client_id='did:web:bob-ih%3A7083:bob'
+SELECT 1 FROM public.edc_sts_client WHERE client_id='did:web:bob-ih%3A7083:bob'
 );
 
 -- 2) 결과 확인

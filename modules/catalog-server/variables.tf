@@ -35,6 +35,16 @@ variable "participantId" {
   description = "DID:WEB identifier of the participant"
 }
 
+variable "participant-context-id" {
+  type        = string
+  description = "Participant context DID used for IdentityHub access"
+}
+
+variable "identityhub-url" {
+  type        = string
+  description = "Base URL for the IdentityHub credentials API (e.g. http://alice-ih:7082)"
+}
+
 variable "namespace" {
   type        = string
   description = "Kubernetes namespace to use"

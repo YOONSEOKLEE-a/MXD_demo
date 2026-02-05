@@ -21,6 +21,76 @@
 ################################
 # EDC ControlPlane + DataPlane #
 ################################
+
+# Log4j2 configuration - required for 0.11.2+
+log4j2:
+  enableJsonLogs: true
+  config: |-
+    Appenders:
+      Console:
+        name: CONSOLE
+        JsonTemplateLayout:
+          eventTemplate: |-
+            {
+              "timestamp": {
+                "$resolver": "timestamp",
+                "pattern": {
+                  "format": "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS",
+                  "timeZone": "UTC"
+                }
+              },
+              "level": {
+                "$resolver": "level",
+                "field": "severity",
+                "severity": {
+                  "field": "keyword"
+                }
+              },
+              "message": {
+                "$resolver": "message"
+              }
+            }
+    Loggers:
+      Root:
+        level: "OFF"
+      Logger:
+        - name: org.eclipse.edc.monitor.logger
+          level: DEBUG
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.edc.iam.identitytrust
+          level: TRACE
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.edc.iam.identitytrust.core
+          level: TRACE
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.edc.iam.identitytrust.transform
+          level: TRACE
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.edc.iam.identitytrust.spi
+          level: TRACE
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.edc.token
+          level: DEBUG
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.tractusx.edc.iam
+          level: DEBUG
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.tractusx.edc.iam.iatp
+          level: TRACE
+          AppenderRef:
+            ref: CONSOLE
+        - name: org.eclipse.tractusx.edc.iam.dcp.sts
+          level: TRACE
+          AppenderRef:
+            ref: CONSOLE
+
 participant:
   id: "test-participant"
 controlplane:
@@ -43,6 +113,8 @@ controlplane:
 # uncomment the following lines if a custom tx-control-plane runtime images should be used.
   image:
     pullPolicy: Always
+    repository: "tractusx/edc-controlplane-postgresql-hashicorp-vault"
+    tag: "0.11.2"
 
   securityContext:
     # avoids some errors in the log: cannot write temp files of large multipart requests when R/O
@@ -61,7 +133,8 @@ dataplane:
     periodSeconds: 5
   image:
     pullPolicy: Always
-#    repository: "edc-dataplane-hashicorp-vault"
+    repository: "tractusx/edc-dataplane-hashicorp-vault"
+    tag: "0.11.2"
   securityContext:
     # avoids some errors in the log: cannot write temp files of large multipart requests when R/O
     readOnlyRootFilesystem: false
@@ -69,9 +142,6 @@ dataplane:
     endpointOverride: http://minio:9000
     secretAccessKey: qwerty123
     accessKeyId: qwerty123
-
-  env:
-    "EDC_API_AUTH_KEY" : "password"
 
 postgresql:
    # JDBC URL should be set from `main.tf`
@@ -81,9 +151,11 @@ postgresql:
      username:
      password:
 vault:
-  hashicorp:
-    url: http://{{ .Release.Name }}-vault:8200
-    token: root
+    hashicorp:
+      url: http://{{ .Release.Name }}-vault:8200
+      token: root
+      paths:
+        secret: /v1/secret
     secrets:
 backendService:
   httpProxyTokenReceiverUrl: "http://backend:8080"

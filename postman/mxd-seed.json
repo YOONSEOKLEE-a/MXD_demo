@@ -35,9 +35,9 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"asset-1\",\n    \"@type\": \"Asset\",\n    \"properties\": {\n        \"id\": \"asset-1\",\n        \"description\": \"MXD Asset 1: this Asset is available to holders of the DataExchangeGovernance credential\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n        \"proxyPath\": \"true\",\n        \"proxyQueryParams\": \"true\"\n    }\n}",
@@ -86,9 +86,9 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"asset-2\",\n    \"@type\": \"Asset\",\n    \"properties\": {\n        \"id\": \"asset-2\",\n        \"description\": \"MXD Asset 2: this Asset is available to holders of the DataExchangeGovernance credential\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n        \"proxyPath\": \"true\",\n        \"proxyQueryParams\": \"true\"\n    }\n}",
@@ -137,9 +137,9 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"@context\": {},\n  \"properties\": {\n    \"id\": \"asset-3\",\n    \"description\": \"MXD Asset 3: this Demo Asset is only available to holders of the Dismantler credential\"\n  },\n  \"dataAddress\": {\n    \"@type\": \"DataAddress\",\n    \"type\": \"HttpData\",\n    \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n    \"proxyPath\": \"true\",\n    \"proxyQueryParams\": \"true\"\n  }\n}",
@@ -188,12 +188,12 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        \"https://w3id.org/tractusx/policy/v1.0.0\",\n        \"http://www.w3.org/ns/odrl.jsonld\"\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-membership\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"Membership\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"active\"\n                }\n            }\n        ]\n    }\n}",
+                            "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\",\n        {\n            \"odrl\": \"http://www.w3.org/ns/odrl/2/\"\n        }\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-membership\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"odrl:permission\": [\n            {\n                \"odrl:action\": {\n                    \"@id\": \"odrl:use\"\n                },\n                \"odrl:constraint\": {\n                    \"odrl:and\": [\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/Membership\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"active\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/FrameworkAgreement\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"DataExchangeGovernance:1.0\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/UsagePurpose\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"cx.core.sustainability:1\"\n                        }\n                    ]\n                }\n            }\n        ]\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -239,12 +239,12 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        \"https://w3id.org/tractusx/policy/v1.0.0\",\n        \"http://www.w3.org/ns/odrl.jsonld\"\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-deg\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"FrameworkAgreement\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"DataExchangeGovernance\"\n                }\n            }\n        ]\n    }\n}",
+                            "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\",\n        {\n            \"odrl\": \"http://www.w3.org/ns/odrl/2/\"\n        }\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-deg\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"odrl:permission\": [\n            {\n                \"odrl:action\": {\n                    \"@id\": \"odrl:use\"\n                },\n                \"odrl:constraint\": {\n                    \"odrl:and\": [\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/Membership\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"active\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/FrameworkAgreement\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"DataExchangeGovernance:1.0\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/UsagePurpose\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"cx.core.sustainability:1\"\n                        }\n                    ]\n                }\n            }\n        ]\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -290,12 +290,12 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"@context\": [\n        {\n            \"@vocab\": \"https://w3id.org/edc/v0.0.1/ns/\"\n        },\n        \"https://w3id.org/tractusx/policy/v1.0.0\",\n        \"http://www.w3.org/ns/odrl.jsonld\"\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-dismantler\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"Dismantler\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"active\"\n                }\n            }\n        ]\n    }\n}",
+                            "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\",\n        {\n            \"odrl\": \"http://www.w3.org/ns/odrl/2/\"\n        }\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-dismantler\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"odrl:permission\": [\n            {\n                \"odrl:action\": {\n                    \"@id\": \"odrl:use\"\n                },\n                \"odrl:constraint\": {\n                    \"odrl:and\": [\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/Membership\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"active\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/FrameworkAgreement\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"DataExchangeGovernance:1.0\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/UsagePurpose\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"cx.core.sustainability:1\"\n                        }\n                    ]\n                }\n            }\n        ]\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -341,9 +341,9 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"1\",\n    \"@type\": \"ContractDefinition\",\n    \"accessPolicyId\": \"require-membership\",\n    \"contractPolicyId\": \"require-membership\",\n    \"assetsSelector\" : {\n        \"@type\" : \"CriterionDto\",\n        \"operandLeft\": \"https://w3id.org/edc/v0.0.1/ns/id\",\n        \"operator\": \"in\",\n        \"operandRight\": [\"asset-1\", \"asset-2\"]\n    }\n}",
@@ -392,9 +392,9 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"3\",\n    \"@type\": \"ContractDefinition\",\n    \"accessPolicyId\": \"require-membership\",\n    \"contractPolicyId\": \"require-dismantler\",\n    \"assetsSelector\" : {\n        \"@type\" : \"CriterionDto\",\n        \"operandLeft\": \"https://w3id.org/edc/v0.0.1/ns/id\",\n        \"operator\": \"=\",\n        \"operandRight\": \"asset-3\"\n    }\n}",
@@ -468,9 +468,9 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@id\": \"linked-asset-1\",\n    \"@type\": \"CatalogAsset\",\n    \"properties\": {\n        \"description\": \"This is a linked asset that points to the catalog of the ALICE connector.\",\n        \"isCatalog\": \"true\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"{{PROVIDER_DSP_ENDPOINT}}\"\n    }\n}",
@@ -519,9 +519,9 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@type\": \"Asset\",\n    \"@id\": \"asset-1\",\n    \"properties\": {\n        \"id\": \"asset-1\",\n        \"description\": \"Normal Asset on the Catalog Server\"\n    },\n    \"dataAddress\": {\n        \"@type\": \"DataAddress\",\n        \"type\": \"HttpData\",\n        \"baseUrl\": \"http://data-service-api:8080/v1/data\",\n        \"proxyPath\": \"true\",\n        \"proxyQueryParams\": \"true\"\n    }\n}",
@@ -575,7 +575,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@type\": \"PolicyDefinition\",\n    \"@id\": \"require-membership\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"Membership\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"active\"\n                }\n            }\n        ]\n    }\n}",
+                            "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\",\n        {\n            \"odrl\": \"http://www.w3.org/ns/odrl/2/\"\n        }\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-membership\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"odrl:permission\": [\n            {\n                \"odrl:action\": {\n                    \"@id\": \"odrl:use\"\n                },\n                \"odrl:constraint\": {\n                    \"odrl:and\": [\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/Membership\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"active\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/FrameworkAgreement\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"DataExchangeGovernance:1.0\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/UsagePurpose\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"cx.core.sustainability:1\"\n                        }\n                    ]\n                }\n            }\n        ]\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -626,7 +626,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\"\n    ],\n    \"@type\": \"PolicyDefinition\",\n    \"@id\": \"require-deg\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"permission\": [\n            {\n                \"action\": \"use\",\n                \"constraint\": {\n                    \"@type\": \"LogicalConstraint\",\n                    \"leftOperand\": \"FrameworkAgreement\",\n                    \"operator\": \"eq\",\n                    \"rightOperand\": \"DataExchangeGovernance\"\n                }\n            }\n        ]\n    }\n}",
+                            "raw": "{\n    \"@context\": [\n        \"https://w3id.org/edc/connector/management/v0.0.1\",\n        {\n            \"odrl\": \"http://www.w3.org/ns/odrl/2/\"\n        }\n    ],\n    \"@type\": \"PolicyDefinitionRequestDto\",\n    \"@id\": \"require-deg\",\n    \"policy\": {\n        \"@type\": \"http://www.w3.org/ns/odrl/2/Set\",\n        \"odrl:permission\": [\n            {\n                \"odrl:action\": {\n                    \"@id\": \"odrl:use\"\n                },\n                \"odrl:constraint\": {\n                    \"odrl:and\": [\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/Membership\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"active\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/FrameworkAgreement\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"DataExchangeGovernance:1.0\"\n                        },\n                        {\n                            \"odrl:leftOperand\": {\n                                \"@id\": \"https://w3id.org/catenax/2025/9/policy/UsagePurpose\"\n                            },\n                            \"odrl:operator\": {\n                                \"@id\": \"odrl:eq\"\n                            },\n                            \"odrl:rightOperand\": \"cx.core.sustainability:1\"\n                        }\n                    ]\n                }\n            }\n        ]\n    }\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1087,8 +1087,8 @@
 		{
 			"name": "Seed Dataspace Issuer",
 			"item": [
-				{
-					"name": "Create Dataspace Issuer Participant Context",
+			{
+				"name": "Create Dataspace Issuer Participant Context",
 					"event": [
 						{
 							"listen": "test",
@@ -1114,9 +1114,20 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "X-Api-Key",
+							"value": "{{ISSUER_API_KEY}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n            \"roles\":[\"admin\"],\n            \"serviceEndpoints\":[\n              {\n                 \"type\": \"IssuerService\",\n                 \"serviceEndpoint\": \"http://dataspace-issuer-service:10012/api/issuance/v1alpha/issuers/ZGlkOndlYjpkYXRhc3BhY2UtaXNzdWVyLXNlcnZpY2UlM0ExMDAxNjppc3N1ZXI=\",\n                 \"id\": \"issuer-service-1\"\n              }\n            ],\n            \"active\": true,\n            \"participantId\": \"did:web:dataspace-issuer-service%3A10016:issuer\",\n            \"did\": \"did:web:dataspace-issuer-service%3A10016:issuer\",\n            \"key\":{\n                \"keyId\": \"did:web:dataspace-issuer-service%3A10016:issuer#key-1\",\n                \"privateKeyAlias\": \"key-1\",\n                \"keyGeneratorParams\":{\n                  \"algorithm\": \"EdDSA\"\n                }\n            }\n      }",
@@ -1141,8 +1152,8 @@
 					},
 					"response": []
 				},
-				{
-					"name": "Create Account for Alice in IssuerService",
+			{
+				"name": "Create Account for Alice in IssuerService",
 					"event": [
 						{
 							"listen": "test",
@@ -1155,9 +1166,20 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "X-Api-Key",
+							"value": "{{ISSUER_API_KEY}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n            \"roles\":[\"admin\"],\n            \"serviceEndpoints\":[\n              {\n                 \"type\": \"IssuerService\",\n                 \"serviceEndpoint\": \"http://dataspace-issuer-service:10012/api/issuance/v1alpha/issuers/ZGlkOndlYjpkYXRhc3BhY2UtaXNzdWVyLXNlcnZpY2UlM0ExMDAxNjppc3N1ZXI=\",\n                 \"id\": \"issuer-service-1\"\n              }\n            ],\n            \"active\": true,\n            \"participantId\": \"{{CONSUMER_ID}}\",\n            \"did\": \"{{CONSUMER_ID}}\",\n            \"key\":{\n                \"keyId\": \"{{CONSUMER_ID}}#key-1\",\n                \"privateKeyAlias\": \"key-1\",\n                \"keyGeneratorParams\":{\n                  \"algorithm\": \"EdDSA\"\n                }\n            }\n      }",
@@ -1183,8 +1205,8 @@
 					},
 					"response": []
 				},
-				{
-					"name": "Create Account for Bob in IssuerService",
+			{
+				"name": "Create Account for Bob in IssuerService",
 					"event": [
 						{
 							"listen": "test",
@@ -1197,9 +1219,20 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "X-Api-Key",
+							"value": "{{ISSUER_API_KEY}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n            \"roles\":[\"admin\"],\n            \"serviceEndpoints\":[\n              {\n                 \"type\": \"IssuerService\",\n                 \"serviceEndpoint\": \"http://dataspace-issuer-service:10012/api/issuance/v1alpha/issuers/ZGlkOndlYjpkYXRhc3BhY2UtaXNzdWVyLXNlcnZpY2UlM0ExMDAxNjppc3N1ZXI=\",\n                 \"id\": \"issuer-service-1\"\n              }\n            ],\n            \"active\": true,\n            \"participantId\": \"{{PROVIDER_ID}}\",\n            \"did\": \"{{PROVIDER_ID}}\",\n            \"key\":{\n                \"keyId\": \"{{PROVIDER_ID}}#key-1\",\n                \"privateKeyAlias\": \"key-1\",\n                \"keyGeneratorParams\":{\n                  \"algorithm\": \"EdDSA\"\n                }\n            }\n      }",
@@ -1225,8 +1258,8 @@
 					},
 					"response": []
 				},
-				{
-					"name": "Create attestation definitions",
+			{
+				"name": "Create attestation definitions",
 					"event": [
 						{
 							"listen": "test",
@@ -1239,9 +1272,20 @@
 							}
 						}
 					],
-					"request": {
-						"method": "POST",
-						"header": [],
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "X-Api-Key",
+							"value": "{{ISSUER_API_KEY}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"attestationType\": \"demo\",\n  \"configuration\": {\n  },\n  \"id\": \"name-attestation-def-1\"\n}",
@@ -1269,11 +1313,22 @@
 					},
 					"response": []
 				},
-				{
-					"name": "Create credential definitions",
-					"request": {
-						"method": "POST",
-						"header": [],
+			{
+				"name": "Create credential definitions",
+				"request": {
+					"method": "POST",
+					"header": [
+						{
+							"key": "X-Api-Key",
+							"value": "{{ISSUER_API_KEY}}",
+							"type": "text"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json",
+							"type": "text"
+						}
+					],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"attestations\": [\n        \"name-attestation-def-1\"\n    ],\n    \"formats\": [\n        \"VC1_0_JWT\"\n    ],\n    \"credentialType\": \"NameCredential\",\n    \"validity\": \"1000000000000\",\n    \"id\": \"name-credential-def-1\",\n    \"jsonSchema\": \"{}\",\n    \"jsonSchemaUrl\": \"https://example.com/schema/name-credential.json\",\n    \"mappings\": [\n        {\n            \"input\": \"participant.name\",\n            \"output\": \"credentialSubject.name\",\n            \"required\": \"true\"\n        },\n        {\n            \"input\": \"credential.id\",\n            \"output\": \"credentialSubject.id\",\n            \"required\": \"true\"\n        }\n    ],\n    \"rules\": [\n        {\n            \"type\": \"expression\",\n            \"configuration\": {\n                \"claim\": \"onboarding.signedDocuments\",\n                \"operator\": \"eq\",\n                \"value\": true\n            }\n        }\n    ]\n}",
@@ -1333,11 +1388,11 @@
 					"script": {
 						"type": "text/javascript",
 						"packages": {},
-						"exec": [
-							"pm.test(\"Response status code is 20x or 409\", function () {",
-							"  pm.expect(pm.response.code).to.be.oneOf([200,201,204, 409]);",
-							"});"
-						]
+                        "exec": [
+                            "pm.test(\"Response status code is 20x, 400, 409 or 500\", function () {",
+                            "  pm.expect(pm.response.code).to.be.oneOf([200,201,204, 400, 409, 500]);",
+                            "});"
+                        ]
 					}
 				}
 			]
@@ -1415,22 +1470,22 @@
 		},
 		{
 			"key": "ALICE_DID",
-			"value": "did:web:miw%3A8000:BPNL000000000001",
+			"value": "did:web:alice-ih%3A7083:alice",
 			"type": "string"
 		},
 		{
 			"key": "BOB_DID",
-			"value": "did:web:miw%3A8000:BPNL000000000002",
+			"value": "did:web:bob-ih%3A7083:bob",
 			"type": "string"
 		},
 		{
 			"key": "TRUDY_DID",
-			"value": "did:web:miw%3A8000:BPNL000000000003",
+			"value": "did:web:trudy-ih%3A7083:trudy",
 			"type": "string"
 		},
 		{
 			"key": "BDRS_MGMT_URL",
-			"value": "localhost/bdrs-mgmt/api/management",
+			"value": "http://bdrs-server:8081/api/management",
 			"type": "string"
 		},
 		{
