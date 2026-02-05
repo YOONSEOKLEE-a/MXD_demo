@@ -1,5 +1,39 @@
 # Minimum Tractus-X Dataspace
 
+This repository is a demo snapshot of an MXD / Tractus-X EDC internship lab. It preserves reproducibility notes and
+debug history as-is. Messy by design.
+
+Key notes:
+```
++-------------+                                +-------------+
+|    ALICE    |  (1) Catalog Request           |     BOB     |
+|  (Consumer) | -----------------------------> |  (Provider) |
+|             | <----------------------------- |             |
+|             |  (2) Contract Offer            |             |
+|             |                                |             |
+|             |  (3) Negotiate (EDR)           |             |
+|             | -----------------------------> |             |
+|             | <----------------------------- |             |
+|             |  (4) Transfer Agrmnt           |             |
+|             |                                |             |
+|             |  (5) Pull Data (Proxy)         |             |
+|             | -----------------------------> |             |
+|             | <----------------------------- |             |
++-------------+       (6) Asset Data           +-------------+
+```
+
+- No ingress controller (NGINX or otherwise). Access is via port-forwarding only.
+- Debug history is append-only in `debug_progress.md` and `session-ses_3f07.md`.
+- Not a production template; expect local-only settings and artifacts.
+
+## Quick Demo (EDR)
+
+For the fastest end-to-end transfer demo (catalog -> negotiation -> transfer), use the EDR-based walkthrough:
+
+- `DEMO.md`
+
+It clearly labels essential EDC steps vs demo-only shortcuts and documents the known negotiation blocker.
+
 ## 1. Prerequisites
 
 In order to run the Minimum Tractus-X Dataspace "MXD" on your local machine, please make sure the following
@@ -35,28 +69,18 @@ For the most bare-bones installation of the dataspace, execute the following com
 
 
 
-We are using KinD as Kubernetes runtime, so all commands here relate to that. First, we need to create a cluster and
-install an ingress controller. We'll be using NGINX for that.
+We are using KinD as Kubernetes runtime, so all commands here relate to that. First, we need to create a cluster.
 
 ```shell
 cd /path/to/tutorial-resources/mxd
 kind create cluster -n mxd --config kind.config.yaml
-# the next step is specific to KinD and will be different for other Kubernetes runtimes!
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-# wait until the ingress controller is ready
-kubectl wait --namespace ingress-nginx \
-  --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller \
-  --timeout=90s
 ```
 
 to verify that the cluster was created correctly, please run `kind get clusters` in your shell and verify that `mxd` is
 printed.
 
-Notice that the `kubectl apply` command deploys a Kubernetes Ingress Controller to the cluster and is required to reach
-our applications from outside the cluster. Specifically, it deploys an NGINX ingress controller. Notice also, that the
-command is _specific to KinD_ and will likely not work on other Kubernetes runtimes (minikube, ...) or with other
-ingress controllers!
+This snapshot intentionally does not use an ingress controller. Use port-forwarding (see `port-forward.sh`) to access
+services from your host.
 
 ### 2.2 Build runtime images
 
